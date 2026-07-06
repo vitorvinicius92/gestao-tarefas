@@ -159,7 +159,7 @@ const SUPABASE_URL = "https://werchlgurtcsivgkhyqg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_pckkUzxE7uGvW2mpezmPnw_F5JBiAYH";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
 
-let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [] };
+let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [], escalas: [] };
 let SESSION = null;
 let deviosChart = null;
 let STATE = {
@@ -222,7 +222,7 @@ async function loadPublicOrg(){
   if(!es.error) DB.especialidades = es.data || [];
 }
 async function loadAll(){
-  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi] = await Promise.all([
+  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi,esc_] = await Promise.all([
     sb.from("usuarios").select("*"),
     sb.from("tarefas").select("*"),
     sb.from("comentarios_tarefa").select("*"),
@@ -235,7 +235,8 @@ async function loadAll(){
     sb.from("equipes").select("*"),
     sb.from("especialidades").select("*"),
     sb.from("ferias").select("*").order("data_inicio", { ascending:true }),
-    sb.from("historico_alteracoes").select("*")
+    sb.from("historico_alteracoes").select("*"),
+    sb.from("escalas").select("*").order("data_inicio", { ascending:true })
   ]);
   DB.usuarios = u.data || [];
   DB.tarefas = t.data || [];
@@ -250,6 +251,7 @@ async function loadAll(){
   DB.especialidades = es.data || [];
   DB.ferias = fe.data || [];
   DB.historico = hi.data || [];
+  DB.escalas = esc_.data || [];
   rankingCache = {};
 }
 
@@ -294,29 +296,39 @@ function statusLabel(s){
 }
 function computePerformance(userId){
   const tasks = tasksFor(userId);
-  const concluidas = tasks.filter(t => t.status === "concluida");
+  const concluidas = tasks.filter(t => t.status === "concluida" && t.concluido_em);
   if(!concluidas.length) return null;
-  const noPrazo = concluidas.filter(t => !t.concluido_em || new Date(t.concluido_em) <= new Date(t.prazo)).length;
-  return { pct: Math.round((noPrazo/concluidas.length)*100), total: concluidas.length };
+  let positivas = 0, negativas = 0;
+  concluidas.forEach(t => {
+    const prazoEfetivo = new Date(t.prazo+"T00:00:00");
+    prazoEfetivo.setDate(prazoEfetivo.getDate() + (t.dias_pausados||0));
+    const concluido = new Date(t.concluido_em.slice(0,10)+"T00:00:00");
+    if(concluido <= prazoEfetivo) positivas++; else negativas++;
+  });
+  const total = positivas + negativas;
+  if(!total) return null;
+  const pct = Math.round(((positivas - negativas) / total) * 100);
+  return { pct, total: concluidas.length, positivas, negativas };
 }
 function currentUser(){ return getUser(STATE.currentUserId); }
 function go(screen){ STATE.screen = screen; render(); window.scrollTo(0,0); }
 
 // ---------- GAUGE ----------
-function gaugeSvg(pct){
+function gaugeSvg(pctRaw){
+  const pct = Math.max(0, Math.min(100, pctRaw));
   const angle = 180 * (1 - pct/100);
   const rad = angle * Math.PI/180;
   const nx = (200 + 130*Math.cos(rad)).toFixed(1);
   const ny = (200 - 130*Math.sin(rad)).toFixed(1);
-  const cls = pct >= 90 ? "var(--ok-text)" : (pct >= 70 ? "var(--warn-text)" : "var(--danger-text)");
+  const cls = pctRaw >= 90 ? "var(--ok-text)" : (pctRaw >= 70 ? "var(--warn-text)" : "var(--danger-text)");
   return `<svg width="100%" viewBox="0 0 400 250" role="img" style="max-width:280px;display:block;margin:0 auto;">
-    <title>Ponteiro de entregas no prazo</title><desc>${pct}% de entregas no prazo, meta 90%</desc>
+    <title>Ponteiro de eficiência de prazo</title><desc>${pctRaw}% de eficiência de prazo, meta 90%</desc>
     <path d="M 68 200 A 150 150 0 0 1 172.8 79.1" fill="none" stroke="#E24B4A" stroke-width="24" stroke-linecap="round"/>
     <path d="M 178.2 76.4 A 150 150 0 0 1 226.4 76.4" fill="none" stroke="#EF9F27" stroke-width="24" stroke-linecap="round"/>
     <path d="M 231.8 79.1 A 150 150 0 0 1 332 200" fill="none" stroke="#639922" stroke-width="24" stroke-linecap="round"/>
     <line x1="200" y1="200" x2="${nx}" y2="${ny}" stroke="var(--text)" stroke-width="3" stroke-linecap="round"/>
     <circle cx="200" cy="200" r="7" fill="var(--text)"/>
-    <text x="200" y="236" text-anchor="middle" style="font-size:22px;font-weight:700;fill:${cls};font-family:inherit;">${pct}%</text>
+    <text x="200" y="236" text-anchor="middle" style="font-size:22px;font-weight:700;fill:${cls};font-family:inherit;">${pctRaw}%</text>
   </svg>`;
 }
 
@@ -334,6 +346,8 @@ function render(){
   else if(STATE.screen === "main") app.innerHTML = cu ? renderShell(cu, STATE.tab==='equipe'?'equipe':'minhas', STATE.tab==='equipe'?'Minha equipe':'Minhas tarefas', renderMain()) : renderMenu();
   else if(STATE.screen === "perfil") app.innerHTML = cu ? renderShell(cu, "perfil", "Meu perfil", renderPerfilContent()) : renderMenu();
   else if(STATE.screen === "equipes") app.innerHTML = cu ? renderShell(cu, "equipes", "Equipes", renderEquipesContent()) : renderMenu();
+  else if(STATE.screen === "mapa") app.innerHTML = cu ? renderShell(cu, "mapa", "Mapa da Equipe", renderMapaEquipeContent(cu)) : renderMenu();
+  else if(STATE.screen === "escala") app.innerHTML = cu ? renderShell(cu, "escala", "Minha Escala", renderEscalaContent(cu)) : renderMenu();
 
   if(STATE.openTaskId){ document.body.insertAdjacentHTML("beforeend", renderTaskModal()); }
   if(STATE.screen === "main" && STATE.tab === "equipe" && STATE.equipeSub === "desvios"){ setTimeout(renderDeviosChart, 0); }
@@ -346,7 +360,9 @@ function renderShell(cu, activeKey, pageTitle, contentHtml){
   const navItems = [
     { key:"dashboard", label:"Dashboard", icon:"&#127968;" },
     { key:"minhas", label:"Minhas tarefas", icon:"&#128203;" },
+    { key:"escala", label:"Minha Escala", icon:"&#128197;" },
     ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
+    ...(hasTeam ? [{ key:"mapa", label:"Mapa da Equipe", icon:"&#128506;" }] : []),
     { key:"kanban", label:"Kanban", icon:"&#128202;" },
     { key:"org", label:"Organograma", icon:"&#9776;" },
     { key:"equipes", label:"Equipes", icon:"&#127959;" },
@@ -390,6 +406,8 @@ function goSection(key){
   else if(key === "kanban"){ STATE.tab = "minhas"; STATE.view = "kanban"; go("main"); }
   else if(key === "org") go("org");
   else if(key === "equipes") go("equipes");
+  else if(key === "mapa") go("mapa");
+  else if(key === "escala") go("escala");
   else if(key === "perfil") go("perfil");
 }
 function renderDashboard(cu){
@@ -524,6 +542,276 @@ function renderOrgPublic(){
   </div>`;
 }
 
+function getMapaEquipeData(cu){
+  const subtreeIds = new Set(getSubtreeIds(cu.id).filter(id => id !== cu.id));
+  const pessoas = DB.usuarios.filter(u => subtreeIds.has(u.id) && u.ativo !== false);
+  const ATIVOS = ["a_fazer","em_andamento","impedida"];
+  const tarefasAtivas = DB.tarefas.filter(t => subtreeIds.has(t.atribuido_a) && ATIVOS.includes(t.status));
+
+  const porPessoa = pessoas.map(p => {
+    const minhas = tarefasAtivas.filter(t => t.atribuido_a === p.id);
+    const emExecucao = minhas.some(t => t.status === "em_andamento");
+    let status;
+    if(minhas.length === 0) status = "Disponível";
+    else if(minhas.length > 3) status = "Sobrecarregado";
+    else if(emExecucao) status = "Em execução";
+    else status = "Alocado";
+    const frentes = [...new Set(minhas.map(t => temaNome(t.tema_id)))];
+    return { pessoa: p, ativas: minhas.length, status, frentes, tarefas: minhas };
+  });
+
+  const temaIds = [...new Set(tarefasAtivas.map(t => t.tema_id))];
+  const porFrente = temaIds.map(temaId => {
+    const tarefasFrente = tarefasAtivas.filter(t => t.tema_id === temaId);
+    const pessoasFrente = [...new Set(tarefasFrente.map(t => t.atribuido_a))].map(getUser).filter(Boolean);
+    const temCritico = tarefasFrente.some(t => farolInfo(t).cls === "danger");
+    const temAtencao = tarefasFrente.some(t => farolInfo(t).cls === "warn");
+    const status = temCritico ? "Crítico" : (temAtencao ? "Atenção" : "Em andamento");
+    return { nome: temaNome(temaId), pessoas: pessoasFrente, tarefas: tarefasFrente, status };
+  }).sort((a,b) => (a.status==="Crítico"?0:a.status==="Atenção"?1:2) - (b.status==="Crítico"?0:b.status==="Atenção"?1:2));
+
+  const semResponsavel = DB.tarefas.filter(t => t.status === "aguardando_reatribuicao" &&
+    (t.equipe_lider_id === cu.id || subtreeIds.has(t.equipe_lider_id)));
+
+  return { pessoas, porPessoa, porFrente, tarefasAtivas, semResponsavel };
+}
+function statusOperColor(s){
+  return { "Disponível":"ok", "Alocado":"accent", "Em execução":"warn", "Sobrecarregado":"danger" }[s] || "muted";
+}
+function frenteStatusColor(s){
+  return { "Em andamento":"accent", "Atenção":"warn", "Crítico":"danger" }[s] || "muted";
+}
+function getAlocacaoAtual(usuarioId){
+  const hoje = todayISO();
+  const minhas = DB.escalas.filter(e => e.usuario_id === usuarioId).sort((a,b)=>a.data_inicio.localeCompare(b.data_inicio));
+  let atual = minhas.find(e => e.data_inicio <= hoje && hoje <= e.data_fim);
+  if(!atual) atual = minhas.find(e => e.data_inicio > hoje);
+  return atual || null;
+}
+function escalaStatus(e){
+  const hoje = todayISO();
+  if(hoje < e.data_inicio) return { label:"Agendada", cls:"accent" };
+  if(hoje > e.data_fim) return { label:"Concluída", cls:"muted" };
+  return { label:"Alocado", cls:"ok" };
+}
+function renderEscalaContent(cu){
+  const atual = getAlocacaoAtual(cu.id);
+  const todas = DB.escalas.filter(e => e.usuario_id === cu.id).sort((a,b)=>b.data_inicio.localeCompare(a.data_inicio));
+  const lider = cu.lider_id ? getUser(cu.lider_id) : null;
+
+  return `<h1 style="margin-bottom:4px;">Minha Escala</h1>
+  <p class="muted-text" style="margin-bottom:20px;">Consulte sua alocação atual, turno e período da escala.</p>
+
+  ${atual ? `<div class="grid3" style="gap:10px;margin-bottom:20px;">
+    <div class="card"><p class="muted-text" style="margin-bottom:4px;">Turno</p><p style="font-weight:800;font-size:15px;margin:0;">${atual.turno==='Noturno'?'&#127769;':'&#9728;'} ${esc(atual.turno)}</p></div>
+    <div class="card"><p class="muted-text" style="margin-bottom:4px;">Período</p><p class="mono" style="font-weight:800;font-size:13px;margin:0;">${fmtDate(atual.data_inicio)} a ${fmtDate(atual.data_fim)}</p></div>
+    <div class="card"><p class="muted-text" style="margin-bottom:4px;">Frente</p><p style="font-weight:800;font-size:14px;margin:0;">${esc(atual.frente)}</p></div>
+    <div class="card"><p class="muted-text" style="margin-bottom:4px;">Local</p><p style="font-weight:800;font-size:14px;margin:0;">${esc(atual.local_codigo||'-')}</p><p class="muted-text" style="margin:0;">${esc(atual.local_descricao||'')}</p></div>
+  </div>
+
+  <div class="card" style="margin-bottom:20px;">
+    <h3 style="margin-bottom:10px;">Informações da alocação</h3>
+    <div class="grid3" style="gap:10px;margin-bottom:12px;">
+      <div><p class="muted-text" style="margin:0 0 2px;">Colaborador</p><p style="font-weight:700;margin:0;">${esc(cu.nome)}</p></div>
+      <div><p class="muted-text" style="margin:0 0 2px;">Função</p><p style="font-weight:700;margin:0;">${esc(cu.cargo)}</p></div>
+      <div><p class="muted-text" style="margin:0 0 2px;">Líder</p><p style="font-weight:700;margin:0;">${lider?esc(lider.nome):'-'}</p></div>
+    </div>
+    <p class="muted-text" style="margin:0 0 6px;">Status</p>
+    <span class="badge ${escalaStatus(atual).cls}">${escalaStatus(atual).label}</span>
+    ${atual.observacao ? `<p class="muted-text" style="margin-top:10px;">${esc(atual.observacao)}</p>` : ""}
+  </div>` : `<p class="empty-hint" style="margin-bottom:20px;">Nenhuma alocação de escala cadastrada ainda — fale com seu líder.</p>`}
+
+  <h3 style="margin-bottom:10px;">Histórico e próximas alocações</h3>
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    ${todas.length ? todas.map(e => { const st = escalaStatus(e); return `<div class="card row" style="justify-content:space-between;">
+      <div>
+        <div style="font-weight:700;font-size:13px;">${e.turno==='Noturno'?'&#127769;':'&#9728;'} ${esc(e.frente)}</div>
+        <div class="muted-text mono">${fmtDate(e.data_inicio)} — ${fmtDate(e.data_fim)}</div>
+        ${e.local_codigo ? `<div class="muted-text">${esc(e.local_codigo)}${e.local_descricao?' · '+esc(e.local_descricao):''}</div>` : ""}
+      </div>
+      <span class="badge ${st.cls}">${st.label}</span>
+    </div>`; }).join("") : `<p class="empty-hint">Nada por aqui.</p>`}
+  </div>`;
+}
+function renderEscalaGanttEquipe(cu){
+  const reports = getDirectReports(cu.id);
+  const reportIds = new Set(reports.map(r=>r.id));
+  const limite = new Date(); limite.setDate(limite.getDate()-30);
+  const limiteStr = limite.toISOString().slice(0,10);
+  const entries = DB.escalas.filter(e => reportIds.has(e.usuario_id) && e.data_fim >= limiteStr);
+  if(!entries.length) return "";
+  const pessoas = reports.filter(r => entries.some(e => e.usuario_id === r.id));
+  const rangeStart = entries.reduce((min,e) => e.data_inicio < min ? e.data_inicio : min, entries[0].data_inicio);
+  const rangeEnd = entries.reduce((max,e) => e.data_fim > max ? e.data_fim : max, entries[0].data_fim);
+  const startDate = new Date(rangeStart+"T00:00:00");
+  const endDate = new Date(rangeEnd+"T00:00:00");
+  const totalDays = Math.max(1, Math.round((endDate-startDate)/86400000) + 1);
+  const dayOffset = d => Math.round((new Date(d+"T00:00:00") - startDate)/86400000);
+
+  const rows = pessoas.map(p => {
+    const bars = entries.filter(e => e.usuario_id === p.id).map(e => {
+      const s = dayOffset(e.data_inicio), en = dayOffset(e.data_fim);
+      const leftPct = (s/totalDays)*100, widthPct = ((en-s+1)/totalDays)*100;
+      const cor = e.turno === "Noturno" ? "var(--steel-700)" : "var(--brand-blue)";
+      return `<div title="${esc(p.nome)}: ${esc(e.frente)} (${e.turno}) ${fmtDate(e.data_inicio)}—${fmtDate(e.data_fim)}" style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:4px;bottom:4px;background:${cor};border-radius:5px;"></div>`;
+    }).join("");
+    return `<div style="display:flex;align-items:center;gap:8px;height:34px;">
+      <div style="width:100px;flex-shrink:0;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nome)}</div>
+      <div style="position:relative;flex:1;height:24px;background:var(--surface-2);border-radius:6px;">${bars}</div>
+    </div>`;
+  }).join("");
+
+  return `<div class="card" style="margin-bottom:16px;overflow-x:auto;">
+    <h3 style="margin-bottom:2px;">Linha do tempo</h3>
+    <p class="muted-text" style="margin:0 0 10px;">${fmtDate(rangeStart)} — ${fmtDate(rangeEnd)} · azul = diurno, cinza-escuro = noturno</p>
+    <div style="min-width:420px;display:flex;flex-direction:column;gap:4px;">${rows}</div>
+  </div>`;
+}
+function renderEscalaEquipe(cu){
+  const reports = getDirectReports(cu.id);
+  const lista = DB.escalas.filter(e => reports.some(r=>r.id===e.usuario_id)).sort((a,b)=>b.data_inicio.localeCompare(a.data_inicio));
+  return `
+    ${renderEscalaGanttEquipe(cu)}
+    <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px;">
+      ${lista.length ? lista.map(e => {
+        const u = getUser(e.usuario_id);
+        const st = escalaStatus(e);
+        return `<div class="card row" style="justify-content:space-between;">
+          <div class="row">${avatarHtml(u,30)}<div>
+            <div style="font-weight:700;font-size:13px;">${u?esc(u.nome):"?"} · ${e.turno==='Noturno'?'&#127769;':'&#9728;'} ${esc(e.turno)}</div>
+            <div class="muted-text mono">${fmtDate(e.data_inicio)} — ${fmtDate(e.data_fim)}</div>
+            <div class="muted-text">${esc(e.frente)}${e.local_codigo?' · '+esc(e.local_codigo):''}</div>
+          </div></div>
+          <div class="row">
+            <span class="badge ${st.cls}">${st.label}</span>
+            <button class="small ghost" aria-label="Remover" onclick="removerEscala('${e.id}')"><span style="color:var(--danger);">&#128465;</span></button>
+          </div>
+        </div>`;
+      }).join("") : `<p class="empty-hint">Nenhuma escala cadastrada.</p>`}
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Cadastrar escala</h3>
+      <label class="field-label">Colaborador</label>
+      <select id="es-quem" style="margin-bottom:10px;">${reports.map(r=>`<option value="${r.id}">${esc(r.nome)}</option>`).join("")}</select>
+      <label class="field-label">Turno</label>
+      <select id="es-turno" style="margin-bottom:10px;"><option>Diurno</option><option>Noturno</option></select>
+      <label class="field-label">Frente</label>
+      <input id="es-frente" placeholder="Ex: Inspeção de Campo" style="margin-bottom:10px;" />
+      <div class="row" style="margin-bottom:10px;">
+        <div style="flex:1;"><label class="field-label">Local (código)</label><input id="es-local-codigo" placeholder="Ex: TR-1083KS" /></div>
+        <div style="flex:1;"><label class="field-label">Local (descrição)</label><input id="es-local-desc" placeholder="Ex: Trecho Principal" /></div>
+      </div>
+      <div class="row" style="margin-bottom:10px;">
+        <div style="flex:1;"><label class="field-label">Início</label><input id="es-inicio" type="date" /></div>
+        <div style="flex:1;"><label class="field-label">Fim</label><input id="es-fim" type="date" /></div>
+      </div>
+      <label class="field-label">Observação (opcional)</label>
+      <input id="es-obs" placeholder="Ex: apoio nas atividades de inspeção" style="margin-bottom:12px;" />
+      <button class="primary" style="width:100%;" onclick="submitEscala('${cu.id}')">Cadastrar</button>
+    </div>
+  `;
+}
+async function submitEscala(liderId){
+  const usuarioId = document.getElementById("es-quem").value;
+  const turno = document.getElementById("es-turno").value;
+  const frente = document.getElementById("es-frente").value.trim();
+  const localCodigo = document.getElementById("es-local-codigo").value.trim();
+  const localDesc = document.getElementById("es-local-desc").value.trim();
+  const dataInicio = document.getElementById("es-inicio").value;
+  const dataFim = document.getElementById("es-fim").value;
+  const observacao = document.getElementById("es-obs").value.trim();
+  if(!usuarioId || !frente || !dataInicio || !dataFim) return;
+  if(dataFim < dataInicio){ toast("A data de fim não pode ser antes do início."); return; }
+  const ok = await mutate(sb.from("escalas").insert({
+    usuario_id: usuarioId, turno, frente, local_codigo: localCodigo||null, local_descricao: localDesc||null,
+    data_inicio: dataInicio, data_fim: dataFim, observacao, criado_por: liderId
+  }));
+  if(ok) render();
+}
+async function removerEscala(id){
+  await mutate(sb.from("escalas").delete().eq("id", id));
+  render();
+}
+function renderMapaEquipeContent(cu){
+  const d = getMapaEquipeData(cu);
+  const alocadas = d.porPessoa.filter(p => p.status !== "Disponível").length;
+  const disponiveis = d.porPessoa.filter(p => p.status === "Disponível");
+  const sobrecarregados = d.porPessoa.filter(p => p.status === "Sobrecarregado");
+  const criticas = d.tarefasAtivas.filter(t => farolInfo(t).cls === "danger" && d.porFrente.find(f => f.tarefas.includes(t))?.pessoas.length === 1);
+  const projetosPendentes = d.porFrente.filter(f => f.tarefas.length >= 4);
+
+  const main = `
+    <h1 style="margin-bottom:4px;">Mapa da Equipe</h1>
+    <p class="muted-text" style="margin-bottom:20px;">Quem está fazendo o quê, onde, e quem pode receber mais demanda.</p>
+
+    <div class="grid3" style="gap:10px;margin-bottom:20px;">
+      <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;">${d.pessoas.length}</div><p class="muted-text" style="margin:0;">Total da equipe</p></div>
+      <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--info);">${alocadas}</div><p class="muted-text" style="margin:0;">Pessoas alocadas</p></div>
+      <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--ok);">${disponiveis.length}</div><p class="muted-text" style="margin:0;">Disponíveis</p></div>
+      <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;color:var(--danger);">${sobrecarregados.length}</div><p class="muted-text" style="margin:0;">Sobrecarregados</p></div>
+      <div class="card" style="text-align:center;"><div style="font-size:24px;font-weight:800;">${d.porFrente.length}</div><p class="muted-text" style="margin:0;">Frentes ativas</p></div>
+    </div>
+
+    <h3 style="margin-bottom:10px;">Alocação por frente</h3>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:24px;">
+      ${d.porFrente.length ? d.porFrente.map(f => `<div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:8px;">
+          <span style="font-weight:800;font-size:14px;">${esc(f.nome)}</span>
+          <span class="badge ${frenteStatusColor(f.status)}">${f.status}</span>
+        </div>
+        <div class="row" style="gap:-6px;flex-wrap:wrap;">
+          ${f.pessoas.map(p => `<div title="${esc(p.nome)}" style="margin-right:-6px;">${avatarHtml(p,28)}</div>`).join("")}
+          <span class="muted-text" style="margin-left:8px;">${f.pessoas.map(p=>p.nome.split(" ")[0]).join(", ")} · ${f.tarefas.length} tarefa(s) ativa(s)</span>
+        </div>
+      </div>`).join("") : `<p class="empty-hint">Nenhuma frente com tarefa ativa no momento.</p>`}
+    </div>
+
+    <h3 style="margin-bottom:10px;">Carga de trabalho da equipe</h3>
+    <div style="overflow-x:auto;">
+    <table style="width:100%;border-collapse:collapse;font-size:12.5px;">
+      <thead><tr style="text-align:left;border-bottom:2px solid var(--border);">
+        <th style="padding:8px 10px;">Colaborador</th><th style="padding:8px 10px;">Função</th>
+        <th style="padding:8px 10px;">Frente atual</th><th style="padding:8px 10px;">Tarefas ativas</th>
+        <th style="padding:8px 10px;">Status</th>
+      </tr></thead>
+      <tbody>
+        ${d.porPessoa.map(p => `<tr style="border-bottom:1px solid var(--border);">
+          <td style="padding:8px 10px;"><div class="row" style="gap:8px;">${avatarHtml(p.pessoa,24)}<span style="font-weight:700;">${esc(p.pessoa.nome)}</span></div></td>
+          <td style="padding:8px 10px;color:var(--text-2);">${esc(p.pessoa.cargo)}</td>
+          <td style="padding:8px 10px;color:var(--text-2);">${p.frentes.length ? esc(p.frentes.join(", ")) : "—"}</td>
+          <td style="padding:8px 10px;">${p.ativas}</td>
+          <td style="padding:8px 10px;"><span class="badge ${statusOperColor(p.status)}">${p.status}</span></td>
+        </tr>`).join("")}
+      </tbody>
+    </table>
+    </div>
+  `;
+
+  const side = `
+    <div class="card">
+      <h3 style="margin-bottom:12px;">&#128680; Alertas de gestão</h3>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        ${sobrecarregados.length ? `<div><p style="font-size:11px;font-weight:800;color:var(--danger-text);text-transform:uppercase;margin-bottom:6px;">Sobrecarregado(s)</p>
+          ${sobrecarregados.map(p => `<div class="row" style="gap:6px;margin-bottom:4px;">${avatarHtml(p.pessoa,20)}<span style="font-size:12.5px;">${esc(p.pessoa.nome)} · ${p.ativas} tarefas</span></div>`).join("")}
+        </div>` : ""}
+        ${d.semResponsavel.length ? `<div><p style="font-size:11px;font-weight:800;color:var(--danger-text);text-transform:uppercase;margin-bottom:6px;">Frente sem responsável</p>
+          ${d.semResponsavel.map(t => `<div style="font-size:12.5px;margin-bottom:4px;cursor:pointer;" onclick="irParaFila()">${esc(t.titulo)}</div>`).join("")}
+        </div>` : ""}
+        ${criticas.length ? `<div><p style="font-size:11px;font-weight:800;color:var(--danger-text);text-transform:uppercase;margin-bottom:6px;">Tarefa crítica sem apoio</p>
+          ${criticas.map(t => `<div style="font-size:12.5px;margin-bottom:4px;cursor:pointer;" onclick="openTask('${t.id}')">${esc(t.titulo)}</div>`).join("")}
+        </div>` : ""}
+        ${disponiveis.length ? `<div><p style="font-size:11px;font-weight:800;color:var(--ok-text);text-transform:uppercase;margin-bottom:6px;">Disponível p/ nova demanda</p>
+          ${disponiveis.map(p => `<div class="row" style="gap:6px;margin-bottom:4px;">${avatarHtml(p.pessoa,20)}<span style="font-size:12.5px;">${esc(p.pessoa.nome)}</span></div>`).join("")}
+        </div>` : ""}
+        ${projetosPendentes.length ? `<div><p style="font-size:11px;font-weight:800;color:var(--warn-text);text-transform:uppercase;margin-bottom:6px;">Muitas pendências</p>
+          ${projetosPendentes.map(f => `<div style="font-size:12.5px;margin-bottom:4px;">${esc(f.nome)} · ${f.tarefas.length} tarefas</div>`).join("")}
+        </div>` : ""}
+        ${(!sobrecarregados.length && !d.semResponsavel.length && !criticas.length && !disponiveis.length && !projetosPendentes.length) ? `<p class="empty-hint">Nada precisando de atenção agora.</p>` : ""}
+      </div>
+    </div>
+  `;
+  return `<div class="app-layout"><div class="container" style="margin:0;flex:1;min-width:0;max-width:none;">${main}</div><div class="sidebar-panel" style="display:block;position:static;">${side}</div></div>`;
+}
 function renderEquipesContent(){
   const semEquipe = DB.usuarios.filter(u => u.ativo !== false && !u.equipe_id);
   return `<h1 style="margin-bottom:4px;">Equipes</h1>
@@ -907,7 +1195,7 @@ function renderMinhasTarefas(cu){
     ${perf ? `<div class="card" style="margin-bottom:16px;">
       <p class="muted-text" style="text-align:center;">Minha performance</p>
       ${gaugeSvg(perf.pct)}
-      <p class="muted-text" style="text-align:center;margin-top:-8px;">Entregas no prazo · meta 90% · ${perf.total} tarefa(s) concluída(s)</p>
+      <p class="muted-text" style="text-align:center;margin-top:-8px;">Eficiência de prazo · meta 90% · ${perf.total} tarefa(s) concluída(s)</p>
     </div>` : ""}
     ${minhasFerias.length ? `<div class="card" style="margin-bottom:16px;">
       <p class="muted-text" style="margin-bottom:6px;">&#127796; Minhas férias</p>
@@ -964,6 +1252,7 @@ function renderMinhaEquipe(cu){
       <button class="small ${STATE.equipeSub==='tarefas'?'active':''}" onclick="setEquipeSub('tarefas')">Tarefas</button>
       <button class="small ${STATE.equipeSub==='fila'?'active':''}" onclick="setEquipeSub('fila')">Fila de reatribuição${fila.length?` · ${fila.length}`:""}</button>
       <button class="small ${STATE.equipeSub==='ferias'?'active':''}" onclick="setEquipeSub('ferias')">Férias</button>
+      <button class="small ${STATE.equipeSub==='escala'?'active':''}" onclick="setEquipeSub('escala')">Escala</button>
       <button class="small ${STATE.equipeSub==='avaliacao'?'active':''}" onclick="setEquipeSub('avaliacao')">Avaliação</button>
       <button class="small ${STATE.equipeSub==='desvios'?'active':''}" onclick="setEquipeSub('desvios')">Desvios</button>
       <button class="small ${STATE.equipeSub==='gerenciar'?'active':''}" onclick="setEquipeSub('gerenciar')">Gerenciar equipe</button>
@@ -971,6 +1260,7 @@ function renderMinhaEquipe(cu){
     ${STATE.equipeSub === "tarefas" ? renderEquipeTarefas(cu) : ""}
     ${STATE.equipeSub === "fila" ? renderFila(cu, fila) : ""}
     ${STATE.equipeSub === "ferias" ? renderFerias(cu) : ""}
+    ${STATE.equipeSub === "escala" ? renderEscalaEquipe(cu) : ""}
     ${STATE.equipeSub === "avaliacao" ? renderAvaliacao(cu) : ""}
     ${STATE.equipeSub === "desvios" ? renderDesvios(cu) : ""}
     ${STATE.equipeSub === "gerenciar" ? renderGerenciarEquipe(cu) : ""}
@@ -1511,7 +1801,7 @@ function renderTaskModal(){
       <p class="muted-text" style="margin-bottom:10px;">${assignee?esc(assignee.nome):"Sem responsável"} · ${esc(temaNome(t.tema_id))} · prazo ${fmtDate(t.prazo)}</p>
       <div class="row" style="margin-bottom:14px;gap:6px;">
         ${badgeHtml(t)}
-        ${isAncestorOfOwner
+        ${(isOwner || isAncestorOfOwner)
           ? `<select onchange="changePrioridade('${t.id}', this.value)" style="width:auto;padding:3px 8px;font-size:11px;">
               <option value="Alta" ${t.prioridade==='Alta'?'selected':''}>Alta</option>
               <option value="Média" ${t.prioridade==='Média'?'selected':''}>Média</option>
