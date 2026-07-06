@@ -1441,8 +1441,12 @@ async function removerFerias(id){
   render();
 }
 
+function getSubtreeMembers(userId){
+  const ids = new Set(getSubtreeIds(userId).filter(id => id !== userId));
+  return DB.usuarios.filter(u => ids.has(u.id) && u.ativo !== false);
+}
 function renderEquipeTarefas(cu){
-  const reports = getDirectReports(cu.id);
+  const reports = getSubtreeMembers(cu.id);
   const filterOpts = `<option value="todos">Todos os liderados</option>` +
     reports.map(r => `<option value="${r.id}" ${STATE.filterLiderado===r.id?'selected':''}>${esc(r.nome)}</option>`).join("");
   let tasks = tasksForSubtree(cu.id).filter(t => t.status !== "pendente_aprovacao" && t.status !== "aguardando_reatribuicao" && t.status !== "recusada");
