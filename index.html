@@ -16,6 +16,7 @@
     font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
   }
   *{box-sizing:border-box;}
+  html,body{overflow-x:hidden;max-width:100%;}
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
   #app{background:var(--bg);color:var(--text);min-height:100vh;padding:0;}
   button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:9px 15px;color:var(--text);transition:transform .12s,box-shadow .12s,background .12s;}
@@ -37,10 +38,35 @@
   .badge.danger{background:var(--danger-bg);color:var(--danger-text);}
   .badge.muted{background:var(--surface-2);color:var(--text-2);}
   .badge.accent{background:var(--info-bg);color:var(--info-text);}
+  .badge.orange{background:#fbe6d4;color:#8a4413;}
   .badge.team{background:var(--steel-800);color:#cdd6e0;}
   .avatar{border-radius:7px;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;overflow:hidden;}
   .avatar img{width:100%;height:100%;object-fit:cover;}
   .container{max-width:780px;margin:0 auto;padding:24px 20px 60px;}
+  .app-shell{display:flex;min-height:100vh;}
+  .side-nav{width:230px;flex-shrink:0;background:var(--steel-900);display:flex;flex-direction:column;padding:16px 12px;position:fixed;top:0;bottom:0;left:0;z-index:30;transform:translateX(-100%);transition:transform .2s ease;overflow-y:auto;}
+  .side-nav.open{transform:translateX(0);}
+  .side-nav-header{display:flex;align-items:center;gap:10px;padding:8px 8px 16px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:10px;}
+  .side-nav-items{display:flex;flex-direction:column;gap:2px;flex:1;}
+  .side-nav-item{background:none;border:none;color:#c7d2db;display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;box-shadow:none;width:100%;}
+  .side-nav-item:hover{background:rgba(255,255,255,.07);}
+  .side-nav-item.active{background:var(--accent);color:#fff;}
+  .nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:25;}
+  .main-area{flex:1;min-width:0;}
+  .top-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
+  .hamburger-btn{display:inline-flex;}
+  @media(min-width:900px){
+    .side-nav{position:sticky;top:0;height:100vh;transform:none;}
+    .nav-overlay{display:none;}
+    .hamburger-btn{display:none;}
+  }
+  .app-layout{display:flex;justify-content:flex-start;gap:24px;align-items:flex-start;flex-wrap:wrap;}
+  .app-layout > .container{margin:0;}
+  .sidebar-panel{width:280px;flex-shrink:0;display:none;position:sticky;top:88px;}
+  @media(min-width:1120px){
+    .sidebar-panel{display:block;}
+    .ranking-inline{display:none;}
+  }
   .topbar{display:flex;justify-content:space-between;align-items:center;padding:13px 20px;background:var(--steel-900);position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.15);border-bottom:3px solid transparent;border-image:linear-gradient(90deg,var(--brand-green),var(--brand-gold),var(--brand-blue)) 1;}
   .brand-stripe{height:5px;background:linear-gradient(90deg,var(--brand-green),var(--brand-gold),var(--brand-blue));}
   .topbar .muted-text{color:#8fa0b5;}
@@ -124,6 +150,7 @@
 </style>
 <div id="app"></div>
 <input type="file" id="hidden-photo-input" accept="image/*" style="display:none;" />
+<input type="file" id="hidden-comment-photo-input" accept="image/*" style="display:none;" />
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
@@ -132,7 +159,7 @@ const SUPABASE_URL = "https://werchlgurtcsivgkhyqg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_pckkUzxE7uGvW2mpezmPnw_F5JBiAYH";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
 
-let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [] };
+let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [] };
 let SESSION = null;
 let deviosChart = null;
 let STATE = {
@@ -152,6 +179,7 @@ let STATE = {
   taskImpedimentoOpen: false,
   photoUploadTarget: null,
   spotlightEquipe: null,
+  navOpen: false,
   busy: false,
   submitting: false
 };
@@ -194,7 +222,7 @@ async function loadPublicOrg(){
   if(!es.error) DB.especialidades = es.data || [];
 }
 async function loadAll(){
-  const [u,t,c,n,tm,ci,ca,av,avn,eq,es] = await Promise.all([
+  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi] = await Promise.all([
     sb.from("usuarios").select("*"),
     sb.from("tarefas").select("*"),
     sb.from("comentarios_tarefa").select("*"),
@@ -205,7 +233,9 @@ async function loadAll(){
     sb.from("avaliacoes").select("*"),
     sb.from("avaliacoes_notas").select("*"),
     sb.from("equipes").select("*"),
-    sb.from("especialidades").select("*")
+    sb.from("especialidades").select("*"),
+    sb.from("ferias").select("*").order("data_inicio", { ascending:true }),
+    sb.from("historico_alteracoes").select("*")
   ]);
   DB.usuarios = u.data || [];
   DB.tarefas = t.data || [];
@@ -218,6 +248,9 @@ async function loadAll(){
   DB.avaliacoesNotas = avn.data || [];
   DB.equipes = eq.data || [];
   DB.especialidades = es.data || [];
+  DB.ferias = fe.data || [];
+  DB.historico = hi.data || [];
+  rankingCache = {};
 }
 
 function getUser(id){ return DB.usuarios.find(u => u.id === id); }
@@ -291,15 +324,117 @@ function gaugeSvg(pct){
 function render(){
   document.querySelectorAll(".modal-overlay").forEach(el => el.remove());
   const app = document.getElementById("app");
+  const cu = STATE.currentUserId ? currentUser() : null;
+
   if(STATE.screen === "loading") app.innerHTML = `<p style="padding:60px;text-align:center;color:#888;">Carregando…</p>`;
   else if(STATE.screen === "menu") app.innerHTML = renderMenu();
-  else if(STATE.screen === "org") app.innerHTML = renderOrgScreen();
   else if(STATE.screen === "login") app.innerHTML = renderLogin();
-  else if(STATE.screen === "main") app.innerHTML = renderMain();
-  else if(STATE.screen === "perfil") app.innerHTML = renderPerfil();
-  else if(STATE.screen === "equipes") app.innerHTML = renderEquipesScreen();
+  else if(STATE.screen === "org") app.innerHTML = cu ? renderShell(cu, "org", "Organograma", renderOrgContent()) : renderOrgPublic();
+  else if(STATE.screen === "dashboard") app.innerHTML = cu ? renderShell(cu, "dashboard", "Dashboard", renderDashboard(cu)) : renderMenu();
+  else if(STATE.screen === "main") app.innerHTML = cu ? renderShell(cu, STATE.tab==='equipe'?'equipe':'minhas', STATE.tab==='equipe'?'Minha equipe':'Minhas tarefas', renderMain()) : renderMenu();
+  else if(STATE.screen === "perfil") app.innerHTML = cu ? renderShell(cu, "perfil", "Meu perfil", renderPerfilContent()) : renderMenu();
+  else if(STATE.screen === "equipes") app.innerHTML = cu ? renderShell(cu, "equipes", "Equipes", renderEquipesContent()) : renderMenu();
+
   if(STATE.openTaskId){ document.body.insertAdjacentHTML("beforeend", renderTaskModal()); }
   if(STATE.screen === "main" && STATE.tab === "equipe" && STATE.equipeSub === "desvios"){ setTimeout(renderDeviosChart, 0); }
+}
+
+function renderShell(cu, activeKey, pageTitle, contentHtml){
+  const hasTeam = getDirectReports(cu.id).length > 0;
+  const notifs = DB.notificacoes.filter(n => n.usuario_id === cu.id);
+  const unread = notifs.filter(n => !n.lida).length;
+  const navItems = [
+    { key:"dashboard", label:"Dashboard", icon:"&#127968;" },
+    { key:"minhas", label:"Minhas tarefas", icon:"&#128203;" },
+    ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
+    { key:"kanban", label:"Kanban", icon:"&#128202;" },
+    { key:"org", label:"Organograma", icon:"&#9776;" },
+    { key:"equipes", label:"Equipes", icon:"&#127959;" },
+    { key:"perfil", label:"Perfil", icon:"&#128100;" }
+  ];
+  return `
+  <div class="app-shell">
+    <div class="side-nav ${STATE.navOpen?'open':''}">
+      <div class="brand-stripe" style="margin:-16px -12px 12px;"></div>
+      <div class="side-nav-header">
+        ${avatarHtml(cu,38)}
+        <div style="min-width:0;">
+          <div style="font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cu.nome)}</div>
+          <div style="font-size:11px;color:#9fb0be;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cu.cargo)}</div>
+        </div>
+      </div>
+      <div class="side-nav-items">
+        ${navItems.map(it => `<button class="side-nav-item ${activeKey===it.key?'active':''}" onclick="goSection('${it.key}')"><span>${it.icon}</span>${it.label}</button>`).join("")}
+      </div>
+      <button class="side-nav-item" onclick="logout()"><span>&#8618;</span>Sair</button>
+    </div>
+    ${STATE.navOpen ? `<div class="nav-overlay" onclick="STATE.navOpen=false;render()"></div>` : ""}
+    <div class="main-area">
+      <div class="top-header">
+        <button class="ghost hamburger-btn" onclick="STATE.navOpen=true;render()" aria-label="Abrir menu">&#9776;</button>
+        <span style="font-weight:700;font-size:14px;">${esc(pageTitle)}</span>
+        <button class="ghost" style="position:relative;" onclick="toggleNotif()" aria-label="Notificações">
+          &#128276;${unread ? `<span style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--danger);"></span>` : ""}
+        </button>
+      </div>
+      ${STATE.notifOpen ? renderNotifDrop(notifs) : ""}
+      <div class="container" style="margin:0;max-width:none;">${contentHtml}</div>
+    </div>
+  </div>`;
+}
+function goSection(key){
+  STATE.navOpen = false;
+  if(key === "dashboard") go("dashboard");
+  else if(key === "minhas"){ STATE.tab = "minhas"; go("main"); }
+  else if(key === "equipe"){ STATE.tab = "equipe"; go("main"); }
+  else if(key === "kanban"){ STATE.tab = "minhas"; STATE.view = "kanban"; go("main"); }
+  else if(key === "org") go("org");
+  else if(key === "equipes") go("equipes");
+  else if(key === "perfil") go("perfil");
+}
+function renderDashboard(cu){
+  const tasks = tasksFor(cu.id).filter(t => !["recusada","pendente_aprovacao","cancelada"].includes(t.status));
+  const concluidas = tasks.filter(t=>t.status==="concluida").length;
+  const andamento = tasks.filter(t=>t.status==="em_andamento").length;
+  const afazer = tasks.filter(t=>t.status==="a_fazer").length;
+  const atrasadas = tasks.filter(t=> t.status !== "concluida" && farolInfo(t).cls === "danger").length;
+  const perf = computePerformance(cu.id);
+  const hora = new Date().getHours();
+  const saudacao = hora < 12 ? "Bom dia" : (hora < 18 ? "Boa tarde" : "Boa noite");
+  const primeiroNome = cu.nome.split(" ")[0];
+
+  const main = `
+    <h1 style="margin-bottom:4px;">${saudacao}, ${esc(primeiroNome)}! &#128075;</h1>
+    <p class="muted-text" style="margin-bottom:20px;">Acompanhe o progresso das suas tarefas e da sua equipe.</p>
+    <div class="card" style="margin-bottom:16px;">
+      <p class="muted-text" style="margin-bottom:8px;">Minha performance</p>
+      <div class="row" style="align-items:center;gap:20px;flex-wrap:wrap;">
+        ${perf ? `<div style="flex-shrink:0;width:220px;">${gaugeSvg(perf.pct)}</div>` : `<p class="empty-hint" style="flex-shrink:0;width:220px;">Sem tarefas concluídas ainda.</p>`}
+        <div class="grid3" style="flex:1;min-width:220px;gap:8px;">
+          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;color:var(--ok);">${concluidas}</div><p class="muted-text" style="margin:0;">Concluída(s)</p></div>
+          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;color:var(--info);">${andamento}</div><p class="muted-text" style="margin:0;">Em andamento</p></div>
+          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;">${afazer}</div><p class="muted-text" style="margin:0;">A fazer</p></div>
+          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;color:var(--danger);">${atrasadas}</div><p class="muted-text" style="margin:0;">Atrasada(s)</p></div>
+        </div>
+      </div>
+    </div>
+    ${renderViewSwitcher()}
+    ${renderTaskViews(applyStatusFilter(tasks))}
+  `;
+  const side = `
+    ${renderCentralAtencao(cu)}
+    ${renderRankingCard(cu)}
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Ações rápidas</h3>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button class="small" onclick="goSection('minhas');STATE.showProposeForm=true;render()">+ Nova tarefa</button>
+        <button class="small" onclick="goSection('org')">Organograma</button>
+        <button class="small" onclick="goSection('equipes')">Equipes</button>
+        <button class="small" onclick="goSection('perfil')">Perfil</button>
+      </div>
+    </div>
+  `;
+  return `<div class="app-layout"><div class="container" style="margin:0;flex:1;min-width:0;max-width:none;">${main}</div><div class="sidebar-panel" style="display:block;position:static;">${side}</div></div>`;
 }
 
 function renderMenu(){
@@ -377,20 +512,21 @@ function renderOrgTree(){
   if(!roots.length) return `<p class="empty-hint">Ainda não há ninguém cadastrado.</p>`;
   return `${renderTeamLegend()}<div class="org-chart-wrap"><ul class="org-chart">${roots.map(orgNodeLi).join("")}</ul></div>`;
 }
-function renderOrgScreen(){
-  return `<div class="container" style="max-width:960px;">
-    <button class="ghost small" onclick="go(${STATE.currentUserId?"'main'":"'menu'"})" style="margin-bottom:16px;">&larr; Voltar</button>
-    <h1 style="margin-bottom:4px;">Organograma</h1>
+function renderOrgContent(){
+  return `<h1 style="margin-bottom:4px;">Organograma</h1>
     <p class="muted-text" style="margin-bottom:16px;">Atualizado automaticamente conforme os líderes ajustam suas equipes</p>
-    ${renderOrgTree()}
+    ${renderOrgTree()}`;
+}
+function renderOrgPublic(){
+  return `<div class="container" style="max-width:960px;">
+    <button class="ghost small" onclick="go('menu')" style="margin-bottom:16px;">&larr; Voltar</button>
+    ${renderOrgContent()}
   </div>`;
 }
 
-function renderEquipesScreen(){
+function renderEquipesContent(){
   const semEquipe = DB.usuarios.filter(u => u.ativo !== false && !u.equipe_id);
-  return `<div class="container" style="max-width:640px;">
-    <button class="ghost small" onclick="go('main')" style="margin-bottom:16px;">&larr; Voltar</button>
-    <h1 style="margin-bottom:4px;">Equipes</h1>
+  return `<h1 style="margin-bottom:4px;">Equipes</h1>
     <p class="muted-text" style="margin-bottom:20px;">Agrupamento por área — independente da linha de comando.</p>
     <div style="display:flex;flex-direction:column;gap:14px;">
       ${DB.equipes.map(eq => {
@@ -420,8 +556,7 @@ function renderEquipesScreen(){
           </div>`).join("")}
         </div>
       </div>` : ""}
-    </div>
-  </div>`;
+    </div>`;
 }
 
 // ---------- Login / Signup ----------
@@ -514,6 +649,29 @@ async function doSignup(){
   if(data.session){ await afterLogin(data.session); }
   else{ toast("Conta criada! Verifique seu e-mail para confirmar antes de entrar."); STATE.authMode = "login"; go("login"); }
 }
+let realtimeChannel = null;
+let realtimeDebounce = null;
+function setupRealtime(){
+  if(realtimeChannel) return;
+  realtimeChannel = sb.channel("app-changes")
+    .on("postgres_changes", { event:"*", schema:"public", table:"tarefas" }, handleRealtimeChange)
+    .on("postgres_changes", { event:"*", schema:"public", table:"comentarios_tarefa" }, handleRealtimeChange)
+    .on("postgres_changes", { event:"*", schema:"public", table:"notificacoes" }, handleRealtimeChange)
+    .on("postgres_changes", { event:"*", schema:"public", table:"ferias" }, handleRealtimeChange)
+    .subscribe();
+}
+function teardownRealtime(){
+  if(realtimeChannel){ sb.removeChannel(realtimeChannel); realtimeChannel = null; }
+}
+function handleRealtimeChange(){
+  clearTimeout(realtimeDebounce);
+  realtimeDebounce = setTimeout(async () => {
+    await loadAll();
+    const tag = document.activeElement && document.activeElement.tagName;
+    if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+    render();
+  }, 500);
+}
 async function afterLogin(session){
   SESSION = session;
   await loadAll();
@@ -522,58 +680,39 @@ async function afterLogin(session){
     toast("Seu perfil ainda está sendo criado, tente novamente em instantes.");
   }
   STATE.tab = "minhas"; STATE.view = "kanban";
-  go("main");
+  setupRealtime();
+  go("dashboard");
 }
 async function logout(){
   await sb.auth.signOut();
+  teardownRealtime();
   SESSION = null; STATE.currentUserId = null; STATE.notifOpen = false;
   go("menu");
 }
 
 function renderMain(){
   const cu = currentUser();
-  if(!cu){ return `<div class="container"><p class="empty-hint">Não foi possível carregar seu perfil.</p><button onclick="logout()">Sair e tentar de novo</button></div>`; }
-  const reports = getDirectReports(cu.id);
-  const hasTeam = reports.length > 0;
+  if(!cu){ return `<p class="empty-hint">Não foi possível carregar seu perfil.</p><button onclick="logout()">Sair e tentar de novo</button>`; }
+  const hasTeam = getDirectReports(cu.id).length > 0;
   if(STATE.tab === "equipe" && !hasTeam) STATE.tab = "minhas";
-  const notifs = DB.notificacoes.filter(n => n.usuario_id === cu.id);
-  const unread = notifs.filter(n => !n.lida).length;
-
   return `
-  <div class="topbar">
-    <button class="ghost row" style="border:none;padding:2px;" onclick="go('perfil')" aria-label="Meu perfil">
-      ${avatarHtml(cu,32)}
-      <div style="text-align:left;"><div style="font-weight:600;font-size:13px;">${esc(cu.nome)}</div><div class="muted-text">${esc(cu.cargo)}</div></div>
-    </button>
-    <div class="row">
-      <button class="ghost" onclick="go('equipes')" aria-label="Equipes">&#127959;</button>
-      <button class="ghost" onclick="go('org')" aria-label="Organograma">&#9776;</button>
-      <button class="ghost" style="position:relative;" onclick="toggleNotif()" aria-label="Notificações">
-        &#128276;${unread ? `<span style="position:absolute;top:2px;right:2px;width:7px;height:7px;border-radius:50%;background:var(--danger);"></span>` : ""}
-      </button>
-      <button class="ghost small" onclick="logout()">Sair</button>
-    </div>
-  </div>
-  ${STATE.notifOpen ? renderNotifDrop(notifs) : ""}
-  <div class="container">
-    <div class="tabs">
+    <div class="tabs" style="margin-top:0;">
       <button class="${STATE.tab==='minhas'?'active':''}" onclick="setTab('minhas')">Minhas tarefas</button>
       ${hasTeam ? `<button class="${STATE.tab==='equipe'?'active':''}" onclick="setTab('equipe')"><span style="margin-right:4px;">&#128101;</span>Minha equipe</button>` : ""}
     </div>
     ${STATE.tab === "minhas" ? renderMinhasTarefas(cu) : renderMinhaEquipe(cu)}
-  </div>`;
+  `;
 }
 
 function toggleNotif(){ STATE.notifOpen = !STATE.notifOpen; render(); }
 
 // ---------- Perfil ----------
-function renderPerfil(){
+function renderPerfilContent(){
   const cu = currentUser();
-  if(!cu) return `<div class="container"><p class="empty-hint">Perfil não encontrado.</p></div>`;
+  if(!cu) return `<p class="empty-hint">Perfil não encontrado.</p>`;
   const proibidos = new Set(getSubtreeIds(cu.id)); // não pode virar liderado do próprio liderado
   const opcoesLider = DB.usuarios.filter(u => u.ativo !== false && !proibidos.has(u.id));
-  return `<div class="container" style="max-width:400px;">
-    <button class="ghost small" onclick="go('main')" style="margin-bottom:16px;">&larr; Voltar</button>
+  return `<div style="max-width:400px;">
     <h1 style="margin-bottom:4px;">Meu perfil</h1>
     <p class="muted-text" style="margin-bottom:20px;">Errou o líder no cadastro? Corrija aqui.</p>
     <div class="card">
@@ -616,7 +755,7 @@ async function salvarPerfil(){
   const especialidadeId = await resolveExtensibleId("especialidades", "pf-especialidade", "pf-nova-especialidade", "especialidade");
   if(!nome || !cargo) return;
   const ok = await mutate(sb.from("usuarios").update({ nome, cargo, lider_id: liderId, equipe_id: equipeId, especialidade_id: especialidadeId }).eq("id", STATE.currentUserId));
-  if(ok){ toast("Perfil atualizado."); go("main"); }
+  if(ok){ toast("Perfil atualizado."); go("dashboard"); }
 }
 function renderNotifDrop(notifs){
   if(!notifs.length) return `<div class="notif-drop"><p class="empty-hint">Nenhuma notificação.</p></div>`;
@@ -630,16 +769,153 @@ function setTab(t){ STATE.tab = t; STATE.view = "kanban"; render(); }
 function setView(v){ STATE.view = v; render(); }
 
 // ---------- Minhas tarefas ----------
+let rankingCache = {};
+async function ensureRanking(equipeId){
+  const monthKey = new Date().toISOString().slice(0,7);
+  if(rankingCache[equipeId] && rankingCache[equipeId].month === monthKey) return;
+  const { data, error } = await sb.rpc("ranking_mensal", { p_equipe_id: equipeId });
+  if(error){ toast("Erro ao calcular ranking: " + error.message); return; }
+  rankingCache[equipeId] = { month: monthKey, data: data || [] };
+  render();
+}
+function getEscopoTarefas(cu){
+  const hasTeam = getDirectReports(cu.id).length > 0;
+  const own = tasksFor(cu.id);
+  if(!hasTeam) return own;
+  const subtree = tasksForSubtree(cu.id);
+  const ids = new Set();
+  const all = [];
+  [...own, ...subtree].forEach(t => { if(!ids.has(t.id)){ ids.add(t.id); all.push(t); } });
+  return all;
+}
+function prazoLabel(t){
+  const hoje = new Date(todayISO());
+  const prazo = new Date(t.prazo);
+  prazo.setDate(prazo.getDate() + (t.dias_pausados||0));
+  const diff = Math.round((prazo - hoje) / 86400000);
+  if(diff < 0) return `atrasado há ${Math.abs(diff)}d`;
+  if(diff === 0) return "vence hoje";
+  if(diff === 1) return "amanhã";
+  return `em ${diff} dias`;
+}
+function formatQuando(iso){
+  const d = new Date(iso);
+  const hoje = new Date(); hoje.setHours(0,0,0,0);
+  const ontem = new Date(hoje); ontem.setDate(ontem.getDate()-1);
+  const dData = new Date(d); dData.setHours(0,0,0,0);
+  const hora = d.toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  if(dData.getTime() === hoje.getTime()) return `Hoje, ${hora}`;
+  if(dData.getTime() === ontem.getTime()) return `Ontem, ${hora}`;
+  return fmtDate(d.toISOString().slice(0,10)) + ", " + hora;
+}
+function getAtividadesRecentes(escopo){
+  const idsEscopo = new Set(escopo.map(t=>t.id));
+  const tituloDe = id => { const t = escopo.find(x=>x.id===id); return t ? t.titulo : "tarefa"; };
+  const primeiroNome = u => u ? u.nome.split(" ")[0] : "Alguém";
+  const eventos = [];
+  DB.comentarios.filter(c => idsEscopo.has(c.tarefa_id)).forEach(c => {
+    const nome = primeiroNome(getUser(c.usuario_id));
+    let texto, icone;
+    if(c.tipo === "impedimento"){ texto = `${nome} reportou impedimento em "${tituloDe(c.tarefa_id)}"`; icone = "&#9888;"; }
+    else if(c.tipo === "resolucao"){ texto = `${nome} resolveu o impedimento em "${tituloDe(c.tarefa_id)}"`; icone = "&#10003;"; }
+    else { texto = `${nome} comentou em "${tituloDe(c.tarefa_id)}"`; icone = "&#128172;"; }
+    eventos.push({ texto, quando: c.criado_em, icone });
+  });
+  DB.historico.filter(h => idsEscopo.has(h.tarefa_id)).forEach(h => {
+    const nome = primeiroNome(getUser(h.alterado_por));
+    const campoLabel = { prazo:"o prazo", prioridade:"a prioridade", atribuido_a:"o responsável" }[h.campo] || h.campo;
+    eventos.push({ texto: `${nome} alterou ${campoLabel} de "${tituloDe(h.tarefa_id)}"`, quando: h.alterado_em, icone:"&#9998;" });
+  });
+  escopo.forEach(t => {
+    eventos.push({ texto: `${primeiroNome(getUser(t.criado_por))} criou a tarefa "${t.titulo}"`, quando: t.criado_em, icone:"&#10133;" });
+    if(t.status === "concluida" && t.concluido_em){
+      eventos.push({ texto: `${primeiroNome(getUser(t.atribuido_a))} concluiu "${t.titulo}"`, quando: t.concluido_em, icone:"&#9989;" });
+    }
+  });
+  eventos.sort((a,b) => new Date(b.quando) - new Date(a.quando));
+  return eventos.slice(0, 6);
+}
+function irParaFila(){ STATE.tab = "equipe"; STATE.equipeSub = "fila"; go("main"); }
+function renderCentralAtencao(cu){
+  const hasTeam = getDirectReports(cu.id).length > 0;
+  const escopo = getEscopoTarefas(cu);
+  const criticos = escopo.filter(t =>
+    !["concluida","cancelada","recusada","pendente_aprovacao","aguardando_reatribuicao"].includes(t.status)
+    && ["danger","warn"].includes(farolInfo(t).cls)
+  ).sort((a,b) => a.prazo.localeCompare(b.prazo)).slice(0,4);
+  const semResp = hasTeam ? DB.tarefas.filter(t => t.status === "aguardando_reatribuicao" && t.equipe_lider_id === cu.id) : [];
+  const atividades = getAtividadesRecentes(escopo);
+  const atrasadasCount = escopo.filter(t => t.status !== "concluida" && farolInfo(t).cls === "danger").length;
+
+  return `<div class="card" style="margin-bottom:16px;">
+    <h3 style="margin-bottom:12px;">&#128064; Central de atenção</h3>
+
+    ${criticos.length ? `<p style="font-size:11px;font-weight:800;color:var(--warn-text);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">&#9888; Prazos críticos</p>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+      ${criticos.map(t => `<div class="row" style="justify-content:space-between;cursor:pointer;min-width:0;" onclick="openTask('${t.id}')">
+        <div class="row" style="gap:6px;min-width:0;flex:1;overflow:hidden;"><span style="font-size:13px;flex-shrink:0;">&#128197;</span><span style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${esc(t.titulo)}</span></div>
+        <span class="badge ${farolInfo(t).cls}" style="flex-shrink:0;">${prazoLabel(t)}</span>
+      </div>`).join("")}
+    </div>` : ""}
+
+    ${semResp.length ? `<p style="font-size:11px;font-weight:800;color:var(--info-text);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">&#128100; Sem responsável</p>
+    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
+      ${semResp.map(t => `<div class="row" style="justify-content:space-between;cursor:pointer;min-width:0;" onclick="irParaFila()">
+        <span style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${esc(t.titulo)}</span><span style="color:var(--text-3);flex-shrink:0;">&#8250;</span>
+      </div>`).join("")}
+    </div>` : ""}
+
+    <p style="font-size:11px;font-weight:800;color:var(--ok-text);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">&#128337; Atividades recentes</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
+      ${atividades.length ? atividades.map(a => `<div class="row" style="align-items:flex-start;gap:8px;">
+        <span style="font-size:13px;flex-shrink:0;">${a.icone}</span>
+        <div style="min-width:0;"><div style="font-size:12.5px;">${esc(a.texto)}</div><div class="muted-text" style="font-size:11px;">${formatQuando(a.quando)}</div></div>
+      </div>`).join("") : `<p class="empty-hint" style="padding:6px 0;">Sem atividade recente.</p>`}
+    </div>
+
+    <div class="row" style="gap:8px;">
+      <div style="flex:1;background:var(--surface-2);border-radius:8px;text-align:center;padding:8px 4px;"><div style="font-weight:800;">${criticos.length}</div><p class="muted-text" style="margin:0;font-size:10px;">tarefas próximas</p></div>
+      <div style="flex:1;background:var(--danger-bg);border-radius:8px;text-align:center;padding:8px 4px;"><div style="font-weight:800;color:var(--danger-text);">${atrasadasCount}</div><p class="muted-text" style="margin:0;font-size:10px;">atrasada(s)</p></div>
+      ${hasTeam ? `<div style="flex:1;background:var(--surface-2);border-radius:8px;text-align:center;padding:8px 4px;"><div style="font-weight:800;">${semResp.length}</div><p class="muted-text" style="margin:0;font-size:10px;">sem responsável</p></div>` : ""}
+    </div>
+  </div>`;
+}
+function renderRankingCard(cu){
+  if(!cu.equipe_id) return "";
+  ensureRanking(cu.equipe_id);
+  const monthKey = new Date().toISOString().slice(0,7);
+  const cached = rankingCache[cu.equipe_id];
+  const pontosMap = {};
+  if(cached && cached.month === monthKey){ cached.data.forEach(r => { pontosMap[r.usuario_id] = r.pontos; }); }
+  const membros = DB.usuarios.filter(u => u.equipe_id === cu.equipe_id && u.ativo !== false);
+  const ranked = membros.map(u => ({ u, pontos: pontosMap[u.id] || 0 })).sort((a,b) => b.pontos - a.pontos);
+  const mesNome = new Date().toLocaleDateString("pt-BR", { month:"long", year:"numeric" });
+  return `<div class="card" style="margin-bottom:16px;">
+    <p class="muted-text" style="margin-bottom:8px;">&#127942; Ranking da equipe · ${esc(mesNome)}</p>
+    ${ranked.map((r,i) => `<div class="row" style="justify-content:space-between;padding:5px 6px;border-radius:6px;${r.u.id===cu.id?'background:var(--accent-bg);':''}">
+      <div class="row" style="gap:8px;"><span class="mono" style="width:20px;">${i+1}º</span>${avatarHtml(r.u,24)}<span style="font-size:13px;font-weight:${r.u.id===cu.id?'800':'600'};">${esc(r.u.nome)}</span></div>
+      <span class="badge accent">${r.pontos} pts</span>
+    </div>`).join("")}
+  </div>`;
+}
 function renderMinhasTarefas(cu){
   let tasks = tasksFor(cu.id).filter(t => t.status !== "recusada" && t.status !== "pendente_aprovacao");
   tasks = applyStatusFilter(tasks);
   const perf = computePerformance(cu.id);
+  const minhasFerias = DB.ferias.filter(f => f.usuario_id === cu.id && f.data_fim >= todayISO()).sort((a,b)=>a.data_inicio.localeCompare(b.data_inicio));
   return `
     ${perf ? `<div class="card" style="margin-bottom:16px;">
       <p class="muted-text" style="text-align:center;">Minha performance</p>
       ${gaugeSvg(perf.pct)}
       <p class="muted-text" style="text-align:center;margin-top:-8px;">Entregas no prazo · meta 90% · ${perf.total} tarefa(s) concluída(s)</p>
     </div>` : ""}
+    ${minhasFerias.length ? `<div class="card" style="margin-bottom:16px;">
+      <p class="muted-text" style="margin-bottom:6px;">&#127796; Minhas férias</p>
+      ${minhasFerias.map(f => { const st = feriasStatus(f); return `<div class="row" style="justify-content:space-between;">
+        <span class="mono">${fmtDate(f.data_inicio)} — ${fmtDate(f.data_fim)}</span><span class="badge ${st.cls}">${st.label}</span>
+      </div>`; }).join("")}
+    </div>` : ""}
+    <div class="ranking-inline">${renderRankingCard(cu)}</div>
     ${renderViewSwitcher()}
     ${renderTaskViews(tasks, true)}
     <div style="margin-top:20px;">
@@ -687,18 +963,193 @@ function renderMinhaEquipe(cu){
     <div class="tabs" style="margin-top:0;">
       <button class="small ${STATE.equipeSub==='tarefas'?'active':''}" onclick="setEquipeSub('tarefas')">Tarefas</button>
       <button class="small ${STATE.equipeSub==='fila'?'active':''}" onclick="setEquipeSub('fila')">Fila de reatribuição${fila.length?` · ${fila.length}`:""}</button>
+      <button class="small ${STATE.equipeSub==='ferias'?'active':''}" onclick="setEquipeSub('ferias')">Férias</button>
       <button class="small ${STATE.equipeSub==='avaliacao'?'active':''}" onclick="setEquipeSub('avaliacao')">Avaliação</button>
       <button class="small ${STATE.equipeSub==='desvios'?'active':''}" onclick="setEquipeSub('desvios')">Desvios</button>
       <button class="small ${STATE.equipeSub==='gerenciar'?'active':''}" onclick="setEquipeSub('gerenciar')">Gerenciar equipe</button>
     </div>
     ${STATE.equipeSub === "tarefas" ? renderEquipeTarefas(cu) : ""}
     ${STATE.equipeSub === "fila" ? renderFila(cu, fila) : ""}
+    ${STATE.equipeSub === "ferias" ? renderFerias(cu) : ""}
     ${STATE.equipeSub === "avaliacao" ? renderAvaliacao(cu) : ""}
     ${STATE.equipeSub === "desvios" ? renderDesvios(cu) : ""}
     ${STATE.equipeSub === "gerenciar" ? renderGerenciarEquipe(cu) : ""}
   `;
 }
 function setEquipeSub(s){ STATE.equipeSub = s; STATE.view = "kanban"; render(); }
+function feriasStatus(f){
+  const hoje = todayISO();
+  if(hoje < f.data_inicio) return { label:"Agendada", cls:"accent" };
+  if(hoje > f.data_fim) return { label:"Concluída", cls:"muted" };
+  return { label:"Em andamento", cls:"warn" };
+}
+function renderFeriasGantt(cu){
+  const reports = getDirectReports(cu.id);
+  const reportIds = new Set(reports.map(r=>r.id));
+  const limite = new Date(); limite.setDate(limite.getDate()-30);
+  const limiteStr = limite.toISOString().slice(0,10);
+  const entries = DB.ferias.filter(f => reportIds.has(f.usuario_id) && f.data_fim >= limiteStr);
+  if(!entries.length) return "";
+  const pessoas = reports.filter(r => entries.some(e => e.usuario_id === r.id));
+  const rangeStart = entries.reduce((min,e) => e.data_inicio < min ? e.data_inicio : min, entries[0].data_inicio);
+  const rangeEnd = entries.reduce((max,e) => e.data_fim > max ? e.data_fim : max, entries[0].data_fim);
+  const startDate = new Date(rangeStart+"T00:00:00");
+  const endDate = new Date(rangeEnd+"T00:00:00");
+  const totalDays = Math.max(1, Math.round((endDate-startDate)/86400000) + 1);
+  const dayOffset = d => Math.round((new Date(d+"T00:00:00") - startDate)/86400000);
+
+  const dayCounts = new Array(totalDays).fill(0);
+  entries.forEach(e => {
+    const s = Math.max(0, dayOffset(e.data_inicio)), en = Math.min(totalDays-1, dayOffset(e.data_fim));
+    for(let d=s; d<=en; d++) dayCounts[d]++;
+  });
+  let conflitos = 0;
+  for(let d=0; d<totalDays; d++){ if(dayCounts[d] >= 2) conflitos++; }
+
+  const rows = pessoas.map(p => {
+    const bars = entries.filter(e => e.usuario_id === p.id).map(e => {
+      const s = dayOffset(e.data_inicio), en = dayOffset(e.data_fim);
+      let overlap = false;
+      for(let d=Math.max(0,s); d<=Math.min(totalDays-1,en); d++){ if(dayCounts[d] >= 2){ overlap = true; break; } }
+      const leftPct = (s/totalDays)*100, widthPct = ((en-s+1)/totalDays)*100;
+      const color = overlap ? "var(--danger)" : "var(--brand-blue)";
+      return `<div title="${esc(p.nome)}: ${fmtDate(e.data_inicio)} — ${fmtDate(e.data_fim)}${overlap?' (sobreposição)':''}" style="position:absolute;left:${leftPct}%;width:${widthPct}%;top:4px;bottom:4px;background:${color};border-radius:5px;"></div>`;
+    }).join("");
+    return `<div style="display:flex;align-items:center;gap:8px;height:34px;">
+      <div style="width:100px;flex-shrink:0;font-size:11.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(p.nome)}</div>
+      <div style="position:relative;flex:1;height:24px;background:var(--surface-2);border-radius:6px;">${bars}</div>
+    </div>`;
+  }).join("");
+
+  return `<div class="card" style="margin-bottom:16px;overflow-x:auto;">
+    <h3 style="margin-bottom:2px;">Linha do tempo</h3>
+    <p class="muted-text" style="margin:0 0 4px;">${fmtDate(rangeStart)} — ${fmtDate(rangeEnd)}</p>
+    ${conflitos ? `<p style="font-size:12px;color:var(--danger-text);margin:0 0 10px;">&#9888; períodos em vermelho têm mais de uma pessoa de férias ao mesmo tempo</p>`
+                : `<p class="muted-text" style="margin:0 0 10px;">Nenhuma sobreposição nesse período.</p>`}
+    <div style="min-width:420px;display:flex;flex-direction:column;gap:4px;">${rows}</div>
+  </div>`;
+}
+function addMonths(dateStr, months){
+  const d = new Date(dateStr+"T00:00:00");
+  d.setMonth(d.getMonth()+months);
+  return d.toISOString().slice(0,10);
+}
+function calcularCicloFerias(u){
+  if(!u.data_admissao) return null;
+  const concluidas = DB.ferias.filter(f => f.usuario_id===u.id && f.data_fim <= todayISO()).sort((a,b)=>b.data_fim.localeCompare(a.data_fim));
+  const baseAutomatica = concluidas.length ? concluidas[0].data_fim : u.data_admissao;
+  const baseCiclo = u.ultimo_retorno_ferias || baseAutomatica;
+  const vencimento1 = addMonths(baseCiclo, 12);
+  const prazoMax = addMonths(baseCiclo, 24);
+  const hoje = todayISO();
+  const diasAteLimite = Math.round((new Date(prazoMax+"T00:00:00") - new Date(hoje+"T00:00:00"))/86400000);
+  let status;
+  if(diasAteLimite <= 60) status = { label:"Crítico · 2ª férias", cls:"danger" };
+  else if(diasAteLimite <= 90) status = { label:"Atenção", cls:"warn" };
+  else if(hoje >= vencimento1) status = { label:"Vencido · 1ª férias", cls:"orange" };
+  else status = { label:"Ok", cls:"ok" };
+  const sugestaoRetorno = (concluidas.length && concluidas[0].data_fim !== u.ultimo_retorno_ferias) ? concluidas[0].data_fim : null;
+  return { baseCiclo, vencimento1, prazoMax, diasAteLimite, status, sugestaoRetorno };
+}
+function calcularIdade(dataNascimento){
+  if(!dataNascimento) return null;
+  const hoje = new Date();
+  const nasc = new Date(dataNascimento+"T00:00:00");
+  let idade = hoje.getFullYear() - nasc.getFullYear();
+  const m = hoje.getMonth() - nasc.getMonth();
+  if(m < 0 || (m===0 && hoje.getDate() < nasc.getDate())) idade--;
+  return idade;
+}
+function renderControleClt(cu){
+  const reports = getDirectReports(cu.id);
+  const itens = reports.map(u => ({ u, ciclo: calcularCicloFerias(u) })).filter(x => x.ciclo);
+  const semData = reports.filter(u => !u.data_admissao);
+  const ordem = { danger:0, warn:1, orange:2, ok:3 };
+  itens.sort((a,b) => ordem[a.ciclo.status.cls] - ordem[b.ciclo.status.cls]);
+  const corBarra = { danger:"var(--danger)", warn:"var(--warn)", orange:"#d2691e", ok:"var(--ok)" };
+  return `<div class="card" style="margin-bottom:16px;background:linear-gradient(160deg,var(--steel-900),var(--steel-800));border:none;">
+    <h3 style="color:#fff;opacity:.85;margin-bottom:12px;">&#9200; Controle de férias · CLT</h3>
+    ${itens.length ? `<div style="display:flex;flex-direction:column;gap:10px;">
+      ${itens.map(({u,ciclo}) => {
+        const idade = calcularIdade(u.data_nascimento);
+        const totalDias = Math.round((new Date(ciclo.prazoMax+"T00:00:00") - new Date(ciclo.baseCiclo+"T00:00:00"))/86400000) || 1;
+        const decorridoDias = totalDias - ciclo.diasAteLimite;
+        const pct = Math.max(0, Math.min(100, (decorridoDias/totalDias)*100));
+        return `<div style="background:rgba(255,255,255,.06);border-left:4px solid ${corBarra[ciclo.status.cls]};border-radius:8px;padding:10px 14px;">
+          <div class="row" style="justify-content:space-between;margin-bottom:7px;">
+            <div class="row">${avatarHtml(u,26)}<div>
+              <div style="font-weight:700;font-size:13px;color:#fff;">${esc(u.nome)}</div>
+              <div style="font-size:11.5px;color:#9fb0be;">${idade!==null ? idade+' anos · ' : ''}admitido em ${fmtDate(u.data_admissao)}</div>
+            </div></div>
+            <span class="badge ${ciclo.status.cls}">${ciclo.status.label}</span>
+          </div>
+          <div style="height:7px;background:rgba(255,255,255,.12);border-radius:5px;overflow:hidden;margin-bottom:5px;">
+            <div style="height:100%;width:${pct}%;background:${corBarra[ciclo.status.cls]};"></div>
+          </div>
+          <p class="mono" style="margin:0 0 8px;color:#9fb0be;">${ciclo.diasAteLimite >= 0 ? ciclo.diasAteLimite+' dias até o limite legal (24 meses)' : 'PRAZO ESTOURADO há ' + Math.abs(ciclo.diasAteLimite) + ' dias'}</p>
+          <div class="row" style="gap:6px;flex-wrap:wrap;">
+            <label style="font-size:10.5px;color:#9fb0be;font-weight:700;text-transform:uppercase;letter-spacing:.04em;align-self:center;">Retorno de férias:</label>
+            <input type="date" value="${u.ultimo_retorno_ferias||''}" onchange="atualizarRetornoFerias('${u.id}', this.value)" style="width:auto;padding:5px 8px;font-size:12px;" />
+            ${ciclo.sugestaoRetorno ? `<button class="small" onclick="atualizarRetornoFerias('${u.id}', '${ciclo.sugestaoRetorno}')">Usar ${fmtDate(ciclo.sugestaoRetorno)} (última férias registrada)</button>` : ""}
+          </div>
+        </div>`;
+      }).join("")}
+    </div>` : `<p style="color:#9fb0be;font-size:12.5px;margin:0;">Ninguém com data de admissão cadastrada ainda.</p>`}
+    ${semData.length ? `<p style="color:#9fb0be;font-size:11.5px;margin:10px 0 0;">${semData.length} pessoa(s) sem data de admissão — cadastre em "Gerenciar equipe" pra entrar no controle.</p>` : ""}
+  </div>`;
+}
+function renderFerias(cu){
+  const reports = getDirectReports(cu.id);
+  const reportIds = new Set(reports.map(r=>r.id));
+  const lista = DB.ferias.filter(f => reportIds.has(f.usuario_id)).sort((a,b)=> a.data_inicio.localeCompare(b.data_inicio));
+  return `
+    ${renderControleClt(cu)}
+    ${renderFeriasGantt(cu)}
+    <div style="margin-bottom:16px;">
+      ${lista.length ? lista.map(f => {
+        const u = getUser(f.usuario_id);
+        const st = feriasStatus(f);
+        return `<div class="card row" style="justify-content:space-between;margin-bottom:8px;">
+          <div class="row">${avatarHtml(u,30)}<div>
+            <div style="font-weight:700;font-size:13px;">${u?esc(u.nome):"?"}</div>
+            <div class="muted-text mono">${fmtDate(f.data_inicio)} — ${fmtDate(f.data_fim)}</div>
+            ${f.observacao ? `<div class="muted-text">${esc(f.observacao)}</div>` : ""}
+          </div></div>
+          <div class="row">
+            <span class="badge ${st.cls}">${st.label}</span>
+            <button class="small ghost" aria-label="Remover" onclick="removerFerias('${f.id}')"><span style="color:var(--danger);">&#128465;</span></button>
+          </div>
+        </div>`;
+      }).join("") : `<p class="empty-hint">Nenhuma férias cadastrada pra sua equipe.</p>`}
+    </div>
+    <div class="card">
+      <h3 style="margin-bottom:10px;">Cadastrar férias</h3>
+      <label class="field-label">Colaborador</label>
+      <select id="fe-quem" style="margin-bottom:10px;">${reports.map(r=>`<option value="${r.id}">${esc(r.nome)}</option>`).join("")}</select>
+      <div class="row" style="margin-bottom:10px;">
+        <div style="flex:1;"><label class="field-label">Início</label><input id="fe-inicio" type="date" /></div>
+        <div style="flex:1;"><label class="field-label">Fim</label><input id="fe-fim" type="date" /></div>
+      </div>
+      <label class="field-label">Observação (opcional)</label>
+      <input id="fe-obs" placeholder="Ex: primeira quinzena" style="margin-bottom:12px;" />
+      <button class="primary" style="width:100%;" onclick="submitFerias('${cu.id}')">Cadastrar</button>
+    </div>
+  `;
+}
+async function submitFerias(liderId){
+  const usuarioId = document.getElementById("fe-quem").value;
+  const dataInicio = document.getElementById("fe-inicio").value;
+  const dataFim = document.getElementById("fe-fim").value;
+  const observacao = document.getElementById("fe-obs").value.trim();
+  if(!usuarioId || !dataInicio || !dataFim) return;
+  if(dataFim < dataInicio){ toast("A data de fim não pode ser antes do início."); return; }
+  const ok = await mutate(sb.from("ferias").insert({ usuario_id: usuarioId, data_inicio: dataInicio, data_fim: dataFim, observacao, criado_por: liderId }));
+  if(ok) render();
+}
+async function removerFerias(id){
+  await mutate(sb.from("ferias").delete().eq("id", id));
+  render();
+}
 
 function renderEquipeTarefas(cu){
   const reports = getDirectReports(cu.id);
@@ -900,16 +1351,34 @@ function renderGerenciarEquipe(cu){
     <div class="card" style="margin-bottom:16px;background:var(--accent-bg);border-color:#f0cfa8;">
       <p style="font-size:12.5px;margin:0;">Para adicionar alguém ao seu time, peça que a pessoa acesse este mesmo link, clique em <strong>"Criar conta"</strong> e escolha <strong>${esc(cu.nome)}</strong> como líder direto durante o cadastro.</p>
     </div>
-    <p class="muted-text" style="margin-bottom:12px;">Você só pode remover ou editar a foto de quem está ligado diretamente a você.</p>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      ${reports.map(r => `<div class="card row" style="justify-content:space-between;">
-        <div class="row">${avatarHtml(r,32)}<div><div style="font-weight:600;font-size:13px;">${esc(r.nome)}</div><div class="muted-text">${esc(r.cargo)}</div></div></div>
-        <div class="row">
-          <button class="small ghost" aria-label="Trocar foto" onclick="triggerPhotoUpload('${r.id}')">&#128247;</button>
-          <button class="small ghost" aria-label="Remover" onclick="removerColaborador('${r.id}')"><span style="color:var(--danger);">&#128465;</span></button>
+    <p class="muted-text" style="margin-bottom:12px;">Você só pode remover ou editar dados de quem está ligado diretamente a você.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${reports.map(r => `<div class="card">
+        <div class="row" style="justify-content:space-between;margin-bottom:10px;">
+          <div class="row">${avatarHtml(r,32)}<div><div style="font-weight:600;font-size:13px;">${esc(r.nome)}</div><div class="muted-text">${esc(r.cargo)}</div></div></div>
+          <div class="row">
+            <button class="small ghost" aria-label="Trocar foto" onclick="triggerPhotoUpload('${r.id}')">&#128247;</button>
+            <button class="small ghost" aria-label="Remover" onclick="removerColaborador('${r.id}')"><span style="color:var(--danger);">&#128465;</span></button>
+          </div>
+        </div>
+        <div class="row" style="gap:10px;">
+          <div style="flex:1;"><label class="field-label">Admissão</label>
+            <input type="date" value="${r.data_admissao||''}" onchange="salvarDataColaborador('${r.id}','data_admissao',this.value)" /></div>
+          <div style="flex:1;"><label class="field-label">Nascimento</label>
+            <input type="date" value="${r.data_nascimento||''}" onchange="salvarDataColaborador('${r.id}','data_nascimento',this.value)" /></div>
         </div>
       </div>`).join("") || `<p class="empty-hint">Nenhum colaborador direto.</p>`}
     </div>`;
+}
+async function salvarDataColaborador(userId, campo, valor){
+  await mutate(sb.from("usuarios").update({ [campo]: valor || null }).eq("id", userId));
+  toast("Atualizado.");
+  render();
+}
+async function atualizarRetornoFerias(userId, valor){
+  await mutate(sb.from("usuarios").update({ ultimo_retorno_ferias: valor || null }).eq("id", userId));
+  toast("Ciclo de férias atualizado.");
+  render();
 }
 async function removerColaborador(userId){
   const u = getUser(userId);
@@ -1070,10 +1539,17 @@ function renderTaskModal(){
             const icon = c.tipo==='impedimento' ? ' &#9888;' : (c.tipo==='resolucao' ? ' &#10003;' : '');
             return `<div class="msg">${avatarHtml(autor,22)}<div class="msg-bubble ${cls}">
               <div style="font-size:11px;font-weight:600;margin-bottom:2px;">${autor?esc(autor.nome):""}${icon}</div>
-              <div style="font-size:13px;">${esc(c.texto)}</div></div></div>`;
+              <div style="font-size:13px;">${esc(c.texto)}</div>
+              ${c.anexo_url ? `<a href="${c.anexo_url}" target="_blank" rel="noopener"><img src="${c.anexo_url}" style="max-width:160px;max-height:120px;border-radius:8px;margin-top:6px;display:block;object-fit:cover;" alt="Foto anexada"/></a>` : ""}
+              </div></div>`;
           }).join("") : `<p class="empty-hint" style="padding:10px 0;">Nenhum comentário ainda.</p>`}
         </div>
-        <div class="row"><input id="comment-input" placeholder="Escrever comentário" /><button aria-label="Enviar" onclick="sendComment('${t.id}')">&#10148;</button></div>
+        <div id="comment-photo-preview" style="display:none;margin-bottom:8px;"></div>
+        <div class="row">
+          <button class="ghost small" onclick="triggerCommentPhoto()" aria-label="Anexar foto">&#128247;</button>
+          <input id="comment-input" placeholder="Escrever comentário" style="flex:1;" />
+          <button aria-label="Enviar" onclick="sendComment('${t.id}')">&#10148;</button>
+        </div>
       </div>
       ${isOwner && t.status !== "impedida" && t.status !== "concluida" ? `
         ${STATE.taskImpedimentoOpen ? `
@@ -1104,11 +1580,36 @@ async function cancelarTarefa(taskId){
   if(ok) closeTask();
   render();
 }
+let pendingCommentPhoto = null;
+function triggerCommentPhoto(){ document.getElementById("hidden-comment-photo-input").click(); }
+document.getElementById("hidden-comment-photo-input").addEventListener("change", e => {
+  const file = e.target.files[0];
+  if(!file) return;
+  pendingCommentPhoto = file;
+  const box = document.getElementById("comment-photo-preview");
+  if(box){
+    box.style.display = "block";
+    box.innerHTML = `<span class="badge accent">&#128247; ${esc(file.name)}</span> <button class="ghost small" onclick="pendingCommentPhoto=null;document.getElementById('comment-photo-preview').style.display='none';">&#10005;</button>`;
+  }
+});
+async function uploadAnexo(file, taskId){
+  const path = `${taskId}/${uid()}-${file.name}`.replace(/\s+/g, "_");
+  const { error } = await sb.storage.from("anexos").upload(path, file);
+  if(error){ toast("Erro ao subir foto: " + error.message); return null; }
+  const { data } = sb.storage.from("anexos").getPublicUrl(path);
+  return data.publicUrl;
+}
+function uid(){ return Math.random().toString(36).slice(2) + Date.now().toString(36); }
 async function sendComment(taskId){
   const input = document.getElementById("comment-input");
   const texto = input.value.trim();
-  if(!texto) return;
-  await mutate(sb.from("comentarios_tarefa").insert({ tarefa_id: taskId, usuario_id: STATE.currentUserId, tipo:"comentario", texto }));
+  if(!texto && !pendingCommentPhoto) return;
+  let anexoUrl = null;
+  if(pendingCommentPhoto){
+    anexoUrl = await uploadAnexo(pendingCommentPhoto, taskId);
+    pendingCommentPhoto = null;
+  }
+  await mutate(sb.from("comentarios_tarefa").insert({ tarefa_id: taskId, usuario_id: STATE.currentUserId, tipo:"comentario", texto: texto || "(foto)", anexo_url: anexoUrl }));
   openTask(taskId);
 }
 document.addEventListener("change", e => {
