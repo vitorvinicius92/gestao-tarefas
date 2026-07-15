@@ -155,8 +155,8 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SUPABASE_URL = "https://werchlgurtcsivgkhyqg.supabase.co";
-const SUPABASE_KEY = "sb_publishable_pckkUzxE7uGvW2mpezmPnw_F5JBiAYH";
+const SUPABASE_URL = "https://qnuyafjmsfabvsmxficp.supabase.co";
+const SUPABASE_KEY = "sb_publishable_F759-Bg_Lo2egqQ5yEjeCg_ffY3tlAg";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
 
 let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [], escalas: [] };
@@ -1168,23 +1168,34 @@ function renderCentralAtencao(cu){
     </div>
   </div>`;
 }
-function renderRankingCard(cu){
-  if(!cu.equipe_id) return "";
-  ensureRanking(cu.equipe_id);
+function getEquipesRelevantes(cu){
+  const ids = new Set();
+  if(cu.equipe_id) ids.add(cu.equipe_id);
+  getDirectReports(cu.id).forEach(r => { if(r.equipe_id) ids.add(r.equipe_id); });
+  return [...ids];
+}
+function renderRankingCardFor(cu, equipeId){
+  ensureRanking(equipeId);
   const monthKey = new Date().toISOString().slice(0,7);
-  const cached = rankingCache[cu.equipe_id];
+  const cached = rankingCache[equipeId];
   const pontosMap = {};
   if(cached && cached.month === monthKey){ cached.data.forEach(r => { pontosMap[r.usuario_id] = r.pontos; }); }
-  const membros = DB.usuarios.filter(u => u.equipe_id === cu.equipe_id && u.ativo !== false);
+  const membros = DB.usuarios.filter(u => u.equipe_id === equipeId && u.ativo !== false);
   const ranked = membros.map(u => ({ u, pontos: pontosMap[u.id] || 0 })).sort((a,b) => b.pontos - a.pontos);
   const mesNome = new Date().toLocaleDateString("pt-BR", { month:"long", year:"numeric" });
+  const nomeEquipe = equipeNome(equipeId) || "Equipe";
   return `<div class="card" style="margin-bottom:16px;">
-    <p class="muted-text" style="margin-bottom:8px;">&#127942; Ranking da equipe · ${esc(mesNome)}</p>
+    <p class="muted-text" style="margin-bottom:8px;">&#127942; Ranking · ${esc(nomeEquipe)} · ${esc(mesNome)}</p>
     ${ranked.map((r,i) => `<div class="row" style="justify-content:space-between;padding:5px 6px;border-radius:6px;${r.u.id===cu.id?'background:var(--accent-bg);':''}">
       <div class="row" style="gap:8px;"><span class="mono" style="width:20px;">${i+1}º</span>${avatarHtml(r.u,24)}<span style="font-size:13px;font-weight:${r.u.id===cu.id?'800':'600'};">${esc(r.u.nome)}</span></div>
       <span class="badge accent">${r.pontos} pts</span>
     </div>`).join("")}
   </div>`;
+}
+function renderRankingCard(cu){
+  const equipeIds = getEquipesRelevantes(cu);
+  if(!equipeIds.length) return "";
+  return equipeIds.map(id => renderRankingCardFor(cu, id)).join("");
 }
 function renderMinhasTarefas(cu){
   let tasks = tasksFor(cu.id).filter(t => t.status !== "recusada" && t.status !== "pendente_aprovacao");
