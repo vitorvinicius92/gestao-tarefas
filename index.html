@@ -155,11 +155,11 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
 <script>
-const SUPABASE_URL = "https://werchlgurtcsivgkhyqg.supabase.co";
-const SUPABASE_KEY = "sb_publishable_pckkUzxE7uGvW2mpezmPnw_F5JBiAYH";
+const SUPABASE_URL = "https://qnuyafjmsfabvsmxficp.supabase.co";
+const SUPABASE_KEY = "sb_publishable_F759-Bg_Lo2egqQ5yEjeCg_ffY3tlAg";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
 
-let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [], escalas: [] };
+let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [], escalas: [], subtarefas: [] };
 let SESSION = null;
 let deviosChart = null;
 let STATE = {
@@ -222,7 +222,7 @@ async function loadPublicOrg(){
   if(!es.error) DB.especialidades = es.data || [];
 }
 async function loadAll(){
-  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi,esc_] = await Promise.all([
+  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi,esc_,sub] = await Promise.all([
     sb.from("usuarios").select("*"),
     sb.from("tarefas").select("*"),
     sb.from("comentarios_tarefa").select("*"),
@@ -236,7 +236,8 @@ async function loadAll(){
     sb.from("especialidades").select("*"),
     sb.from("ferias").select("*").order("data_inicio", { ascending:true }),
     sb.from("historico_alteracoes").select("*"),
-    sb.from("escalas").select("*").order("data_inicio", { ascending:true })
+    sb.from("escalas").select("*").order("data_inicio", { ascending:true }),
+    sb.from("subtarefas").select("*")
   ]);
   DB.usuarios = u.data || [];
   DB.tarefas = t.data || [];
@@ -252,6 +253,7 @@ async function loadAll(){
   DB.ferias = fe.data || [];
   DB.historico = hi.data || [];
   DB.escalas = esc_.data || [];
+  DB.subtarefas = sub.data || [];
   rankingCache = {};
 }
 
@@ -1796,6 +1798,60 @@ function renderTaskViews(tasks){
 }
 
 // ---------- Task modal ----------
+function renderInstrucao(t, isAncestorOfOwner){
+  return `<div style="margin-bottom:14px;">
+    <label class="field-label">Instrução do gestor</label>
+    ${isAncestorOfOwner
+      ? `<textarea id="instrucao-input" rows="2" placeholder="Explique a tarefa para o liderado" style="margin-bottom:6px;">${esc(t.instrucao||"")}</textarea>
+         <button class="small" onclick="salvarInstrucao('${t.id}')">Salvar instrução</button>`
+      : (t.instrucao
+          ? `<div class="card" style="background:var(--info-bg);border-color:#c9dcea;"><p style="font-size:13px;margin:0;">${esc(t.instrucao)}</p></div>`
+          : `<p class="empty-hint" style="padding:6px 0;">Nenhuma instrução do gestor ainda.</p>`)}
+  </div>`;
+}
+async function salvarInstrucao(taskId){
+  const val = document.getElementById("instrucao-input").value.trim();
+  await mutate(sb.from("tarefas").update({ instrucao: val }).eq("id", taskId));
+  openTask(taskId);
+}
+function renderChecklist(taskId){
+  const itens = DB.subtarefas.filter(s => s.tarefa_id === taskId).sort((a,b)=>new Date(a.criado_em)-new Date(b.criado_em));
+  const total = itens.length;
+  const feitos = itens.filter(i=>i.concluido).length;
+  return `<div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
+    <div class="row" style="justify-content:space-between;margin-bottom:8px;">
+      <h3 style="margin:0;">Checklist</h3>
+      ${total ? `<span class="muted-text">${feitos}/${total}</span>` : ""}
+    </div>
+    <div style="display:flex;flex-direction:column;gap:6px;margin-bottom:10px;">
+      ${itens.map(i => `<div class="row" style="gap:8px;background:${i.concluido?'var(--ok-bg)':'var(--surface-2)'};border-radius:8px;padding:7px 10px;">
+        <input type="checkbox" ${i.concluido?'checked':''} onchange="toggleSubtarefa('${i.id}', this.checked)" style="width:auto;flex-shrink:0;" />
+        <span style="flex:1;font-size:13px;min-width:0;${i.concluido?'text-decoration:line-through;color:var(--ok-text);':''}">${esc(i.descricao)}</span>
+        <button class="ghost small" aria-label="Remover item" onclick="removerSubtarefa('${i.id}')"><span style="color:var(--danger);">&#10005;</span></button>
+      </div>`).join("")}
+      ${!itens.length ? `<p class="empty-hint" style="padding:6px 0;">Nenhum item ainda.</p>` : ""}
+    </div>
+    <div class="row">
+      <input id="checklist-input" placeholder="Adicionar item" />
+      <button aria-label="Adicionar item" onclick="addSubtarefa('${taskId}')">+</button>
+    </div>
+  </div>`;
+}
+async function addSubtarefa(taskId){
+  const input = document.getElementById("checklist-input");
+  const descricao = input.value.trim();
+  if(!descricao) return;
+  await mutate(sb.from("subtarefas").insert({ tarefa_id: taskId, descricao, criado_por: STATE.currentUserId }));
+  openTask(taskId);
+}
+async function toggleSubtarefa(id, checked){
+  await mutate(sb.from("subtarefas").update({ concluido: checked }).eq("id", id));
+  openTask(STATE.openTaskId);
+}
+async function removerSubtarefa(id){
+  await mutate(sb.from("subtarefas").delete().eq("id", id));
+  openTask(STATE.openTaskId);
+}
 function openTask(id){ STATE.openTaskId = id; STATE.taskImpedimentoOpen = false; render(); }
 function closeTask(){ STATE.openTaskId = null; document.querySelectorAll(".modal-overlay").forEach(el=>el.remove()); }
 function renderTaskModal(){
@@ -1824,6 +1880,7 @@ function renderTaskModal(){
             </select>`
           : `<span class="badge muted">${esc(t.prioridade)}</span>`}
       </div>
+      ${renderInstrucao(t, isAncestorOfOwner)}
       ${isOwner && ["a_fazer","em_andamento","concluida"].includes(t.status) ? `
         <label class="field-label">Meu status</label>
         <select onchange="changeStatus('${t.id}', this.value)" style="margin-bottom:14px;">
@@ -1835,6 +1892,7 @@ function renderTaskModal(){
         <button class="primary" style="width:100%;margin-bottom:14px;" onclick="resolverImpedimento('${t.id}')">Marcar impedimento como resolvido</button>` : ""}
       ${isAncestorOfOwner && ["a_fazer","em_andamento","impedida"].includes(t.status) ? `
         <button style="width:100%;margin-bottom:14px;color:var(--danger);" onclick="cancelarTarefa('${t.id}')">Cancelar tarefa</button>` : ""}
+      ${renderChecklist(t.id)}
       <div style="border-top:1px solid var(--border);padding-top:12px;margin-bottom:12px;">
         <h3 style="margin-bottom:10px;">Comentários</h3>
         <div style="display:flex;flex-direction:column;gap:8px;max-height:220px;overflow-y:auto;margin-bottom:10px;">
