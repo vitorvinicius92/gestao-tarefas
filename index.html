@@ -2384,7 +2384,11 @@ function farolStripColor(t){
 function prioridadeIcon(p){ return { Alta:"&#128293;", Média:"&#9889;", Baixa:"&#127793;" }[p] || ""; }
 function taskCardHtml(t, showAssignee){
   const assignee = getUser(t.atribuido_a);
-  const canDrag = t.atribuido_a === STATE.currentUserId && ["a_fazer","em_andamento","concluida"].includes(t.status);
+  const isOwner = t.atribuido_a === STATE.currentUserId;
+  const isAncestor = !isOwner && getSubtreeIds(STATE.currentUserId).includes(t.atribuido_a);
+  const canDragStatus = isOwner && ["a_fazer","em_andamento","concluida"].includes(t.status);
+  const canDragPriority = isOwner || isAncestor;
+  const canDrag = canDragStatus || canDragPriority;
   return `<div class="task-card" style="--strip:${farolStripColor(t)};" ${canDrag?`draggable="true" ondragstart="onDragStartTask(event,'${t.id}')" ondragend="onDragEndTask(event)"`:""} onclick="openTask('${t.id}')">
     <p style="font-size:13.5px;font-weight:700;margin:0 0 7px;">${esc(t.titulo)}</p>
     <div class="row" style="justify-content:space-between;margin-bottom:7px;">
@@ -2424,12 +2428,26 @@ async function onDropTask(event, newStatus){
   await mutate(sb.from("tarefas").update({ status: newStatus }).eq("id", taskId));
   render();
 }
-function kanbanColHtml(title, count, bodyHtml, style, dropStatus){
+async function onDropPriority(event, novaPrioridade){
+  event.preventDefault();
+  event.currentTarget.classList.remove("kanban-col-dragover");
+  const taskId = draggedTaskId || (event.dataTransfer && event.dataTransfer.getData("text/plain"));
+  draggedTaskId = null;
+  if(!taskId) return;
+  const t = DB.tarefas.find(x => x.id === taskId);
+  if(!t || t.prioridade === novaPrioridade) return;
+  const isOwner = t.atribuido_a === STATE.currentUserId;
+  const isAncestor = !isOwner && getSubtreeIds(STATE.currentUserId).includes(t.atribuido_a);
+  if(!isOwner && !isAncestor) return;
+  await mutate(sb.from("tarefas").update({ prioridade: novaPrioridade }).eq("id", taskId));
+  render();
+}
+function kanbanColHtml(title, count, bodyHtml, style, dropCall){
   const headerBg = style ? `background:${style.grad};` : "";
   const titleColor = style ? "color:#fff;" : "";
   const countStyle = style ? "background:rgba(255,255,255,.28);color:#fff;" : "";
-  const dropAttrs = dropStatus
-    ? `ondragover="event.preventDefault();this.classList.add('kanban-col-dragover');" ondragleave="this.classList.remove('kanban-col-dragover');" ondrop="onDropTask(event,'${dropStatus}')"`
+  const dropAttrs = dropCall
+    ? `ondragover="event.preventDefault();this.classList.add('kanban-col-dragover');" ondragleave="this.classList.remove('kanban-col-dragover');" ondrop="${dropCall}"`
     : "";
   return `<div class="kanban-col" ${dropAttrs}>
     <div class="kanban-col-header" style="${headerBg}border-radius:9px;padding:8px 10px;margin-bottom:2px;">
@@ -2445,7 +2463,7 @@ function renderTaskViews(tasks){
     const cols = { a_fazer: [], em_andamento: [], concluida: [] };
     tasks.forEach(t => { if(cols[t.status]) cols[t.status].push(t); });
     return `<div class="grid3">${["a_fazer","em_andamento","concluida"].map(s =>
-      kanbanColHtml(statusLabel(s), (cols[s]||[]).length, (cols[s]||[]).map(t=>taskCardHtml(t, true)).join(""), STATUS_STYLE[s], s)
+      kanbanColHtml(statusLabel(s), (cols[s]||[]).length, (cols[s]||[]).map(t=>taskCardHtml(t, true)).join(""), STATUS_STYLE[s], `onDropTask(event,'${s}')`)
     ).join("")}</div>`;
   }
   if(STATE.view === "lista"){
@@ -2462,7 +2480,7 @@ function renderTaskViews(tasks){
   const cols = { Alta: [], Média: [], Baixa: [] };
   tasks.forEach(t => { (cols[t.prioridade] = cols[t.prioridade] || []).push(t); });
   return `<div class="grid3">${["Alta","Média","Baixa"].map(p =>
-    kanbanColHtml(p, (cols[p]||[]).length, (cols[p]||[]).map(t=>taskCardHtml(t, true)).join(""), PRIORIDADE_STYLE[p])
+    kanbanColHtml(p, (cols[p]||[]).length, (cols[p]||[]).map(t=>taskCardHtml(t, true)).join(""), PRIORIDADE_STYLE[p], `onDropPriority(event,'${p}')`)
   ).join("")}</div>`;
 }
 
