@@ -270,18 +270,22 @@ function toast(msg){
   document.body.appendChild(el);
   setTimeout(()=>el.remove(), 4500);
 }
+let lastManualLoadAt = 0;
 async function mutate(promise){
   if(STATE.offlineMode){ toast("Você está offline — essa ação exige conexão com a internet."); return false; }
   const { error } = await promise;
   if(error){ toast("Erro: " + error.message); return false; }
   await loadAll();
+  lastManualLoadAt = Date.now();
   return true;
 }
 function cacheDataLocally(){
-  try{
-    localStorage.setItem("gt_cache_data", JSON.stringify(DB));
-    localStorage.setItem("gt_cache_time", new Date().toISOString());
-  }catch(e){}
+  setTimeout(() => {
+    try{
+      localStorage.setItem("gt_cache_data", JSON.stringify(DB));
+      localStorage.setItem("gt_cache_time", new Date().toISOString());
+    }catch(e){}
+  }, 0);
 }
 function loadCachedData(){
   try{
@@ -1545,6 +1549,7 @@ function teardownRealtime(){
 function handleRealtimeChange(){
   clearTimeout(realtimeDebounce);
   realtimeDebounce = setTimeout(async () => {
+    if(Date.now() - lastManualLoadAt < 1500) return;
     await loadAll();
     const tag = document.activeElement && document.activeElement.tagName;
     if(tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
@@ -2425,8 +2430,12 @@ async function onDropTask(event, newStatus){
   if(!taskId) return;
   const t = DB.tarefas.find(x => x.id === taskId);
   if(!t || t.status === newStatus || t.atribuido_a !== STATE.currentUserId) return;
-  await mutate(sb.from("tarefas").update({ status: newStatus }).eq("id", taskId));
+  const statusAnterior = t.status;
+  t.status = newStatus;
   render();
+  const { error } = await sb.from("tarefas").update({ status: newStatus }).eq("id", taskId);
+  if(error){ t.status = statusAnterior; toast("Erro ao mover: " + error.message); render(); }
+  else{ lastManualLoadAt = Date.now(); loadAll(); }
 }
 async function onDropPriority(event, novaPrioridade){
   event.preventDefault();
@@ -2439,8 +2448,12 @@ async function onDropPriority(event, novaPrioridade){
   const isOwner = t.atribuido_a === STATE.currentUserId;
   const isAncestor = !isOwner && getSubtreeIds(STATE.currentUserId).includes(t.atribuido_a);
   if(!isOwner && !isAncestor) return;
-  await mutate(sb.from("tarefas").update({ prioridade: novaPrioridade }).eq("id", taskId));
+  const prioridadeAnterior = t.prioridade;
+  t.prioridade = novaPrioridade;
   render();
+  const { error } = await sb.from("tarefas").update({ prioridade: novaPrioridade }).eq("id", taskId);
+  if(error){ t.prioridade = prioridadeAnterior; toast("Erro ao mover: " + error.message); render(); }
+  else{ lastManualLoadAt = Date.now(); loadAll(); }
 }
 function kanbanColHtml(title, count, bodyHtml, style, dropCall){
   const headerBg = style ? `background:${style.grad};` : "";
