@@ -79,6 +79,37 @@
   }
   .topbar{display:flex;justify-content:space-between;align-items:center;padding:13px 20px;background:var(--steel-900);position:sticky;top:0;z-index:5;box-shadow:0 2px 8px rgba(0,0,0,.15);border-bottom:3px solid transparent;border-image:linear-gradient(90deg,var(--brand-green),var(--brand-gold),var(--brand-blue)) 1;}
   .brand-stripe{height:5px;background:linear-gradient(90deg,var(--brand-green),var(--brand-gold),var(--brand-blue));}
+  .auth-shell{display:flex;min-height:100vh;}
+  .auth-hero{flex:1.1;background:linear-gradient(135deg,var(--steel-900) 0%,#12283f 55%,var(--brand-blue) 130%);color:#fff;padding:56px 48px;display:none;flex-direction:column;justify-content:center;position:relative;overflow:hidden;}
+  .auth-hero::before{content:'';position:absolute;inset:0;background-image:radial-gradient(circle at 20% 20%, rgba(255,255,255,.06) 0, transparent 40%),radial-gradient(circle at 85% 75%, rgba(255,255,255,.05) 0, transparent 45%);}
+  .auth-hero-inner{position:relative;z-index:1;max-width:480px;animation:auth-pop-in .5s ease-out;}
+  .auth-gear-bg{position:absolute;pointer-events:none;line-height:1;}
+  .auth-gear-1{font-size:190px;top:-55px;right:-40px;color:var(--brand-green);opacity:.16;animation:auth-spin 34s linear infinite;}
+  .auth-gear-2{font-size:130px;bottom:-35px;left:8%;color:var(--brand-gold);opacity:.14;animation:auth-spin-rev 24s linear infinite;}
+  .auth-gear-3{font-size:80px;top:38%;right:12%;color:#fff;opacity:.10;animation:auth-spin 16s linear infinite;}
+  .auth-badge{display:inline-flex;align-items:center;gap:6px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;margin:0 8px 8px 0;animation:auth-wiggle 3.2s ease-in-out infinite;}
+  .auth-badge:nth-child(2){animation-delay:.35s;}
+  .auth-badge:nth-child(3){animation-delay:.7s;}
+  .auth-stats{display:flex;gap:14px;margin-top:36px;flex-wrap:wrap;}
+  .auth-stat-card{background:rgba(255,255,255,.07);backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.16);border-radius:14px;padding:14px 18px;min-width:150px;animation:auth-float 3.6s ease-in-out infinite;}
+  .auth-stat-card:nth-child(2){animation-delay:.5s;}
+  .auth-panel-wrap{flex:1;display:flex;align-items:center;justify-content:center;padding:24px;background:var(--bg);min-height:100vh;}
+  .auth-card{background:var(--surface);border-radius:20px;box-shadow:0 20px 50px rgba(0,0,0,.08);padding:36px 32px;max-width:400px;width:100%;animation:auth-pop-in .5s cubic-bezier(.34,1.56,.64,1);}
+  .auth-logo-spin{display:inline-block;animation:auth-spin 6s linear infinite;}
+  .input-icon-wrap{position:relative;margin-bottom:14px;}
+  .input-icon-wrap input{padding-left:38px;}
+  .input-icon-wrap .icon-left{position:absolute;left:12px;top:50%;transform:translateY(-50%);color:var(--text-3);font-size:14px;pointer-events:none;}
+  .input-icon-wrap .icon-right{position:absolute;right:6px;top:50%;transform:translateY(-50%);cursor:pointer;background:none;border:none;box-shadow:none;padding:6px;font-size:14px;color:var(--text-3);}
+  .btn-cta{width:100%;background:linear-gradient(90deg,var(--brand-blue),#0d3f73);color:#fff;border:none;padding:13px;font-size:14px;font-weight:700;border-radius:10px;display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 4px 0 #0a2f57;transition:transform .15s;}
+  .btn-cta:hover{filter:brightness(1.08);transform:translateY(-2px);}
+  .auth-divider{display:flex;align-items:center;gap:10px;margin:16px 0;color:var(--text-3);font-size:11px;text-transform:uppercase;letter-spacing:.05em;}
+  .auth-divider::before,.auth-divider::after{content:'';flex:1;height:1px;background:var(--border);}
+  @keyframes auth-spin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+  @keyframes auth-spin-rev{from{transform:rotate(360deg);}to{transform:rotate(0deg);}}
+  @keyframes auth-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-7px);}}
+  @keyframes auth-wiggle{0%,100%{transform:rotate(0deg);}50%{transform:rotate(-3deg);}}
+  @keyframes auth-pop-in{0%{opacity:0;transform:scale(.93) translateY(12px);}100%{opacity:1;transform:scale(1) translateY(0);}}
+  @media(min-width:900px){ .auth-hero{display:flex;} }
   .topbar .muted-text{color:#8fa0b5;}
   .topbar button.ghost{color:#e7ebf0;}
   .topbar button.ghost:hover{background:var(--steel-800);}
@@ -89,7 +120,10 @@
   h3{font-size:13.5px;font-weight:800;margin:0;text-transform:uppercase;letter-spacing:.03em;color:var(--text-2);}
   .muted-text{color:var(--text-2);font-size:12.5px;}
   .mono{font-family:var(--mono);font-size:11.5px;color:var(--text-3);}
-  .kanban-col{display:flex;flex-direction:column;gap:10px;background:var(--surface-2);border-radius:var(--radius-lg);padding:12px;min-height:80px;}
+  .kanban-col{display:flex;flex-direction:column;gap:10px;background:var(--surface-2);border-radius:var(--radius-lg);padding:12px;min-height:80px;transition:background .12s,box-shadow .12s;}
+  .kanban-col-dragover{background:var(--accent-bg)!important;box-shadow:inset 0 0 0 2px var(--accent);}
+  .task-card[draggable="true"]{cursor:grab;}
+  .task-card[draggable="true"]:active{cursor:grabbing;}
   .kanban-col-header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 6px;}
   .kanban-col-title{font-size:11.5px;font-weight:800;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2);}
   .kanban-col-count{background:var(--steel-900);color:#fff;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:20px;}
@@ -139,6 +173,16 @@
   .org-card-role{font-size:10.5px;color:var(--text-2);white-space:nowrap;}
   .org-card-team{font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:.04em;color:var(--accent-text);white-space:nowrap;}
   .org-card.has-children::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:var(--border-strong);}
+
+  /* mapa mental radial */
+  .mm-canvas{position:relative;width:100%;height:440px;border-radius:16px;overflow:hidden;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:22px 22px;}
+  .mm-node{position:absolute;transform:translate(-50%,-50%);border-radius:999px;padding:11px 16px;font-size:12px;font-weight:800;text-align:center;color:#fff;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.18);max-width:120px;transition:transform .15s;z-index:2;line-height:1.2;}
+  .mm-node:hover{transform:translate(-50%,-50%) scale(1.06);}
+  .mm-node.mm-center{background:var(--steel-900);font-size:14px;padding:16px 22px;max-width:150px;z-index:3;}
+  .mm-node-actions{display:flex;gap:4px;justify-content:center;margin-top:5px;}
+  .mm-node-actions button{width:20px;height:20px;padding:0;font-size:14px;font-weight:800;line-height:1;border-radius:50%;border:none;background:rgba(255,255,255,.35);color:#fff;box-shadow:none;}
+  .mm-node-actions button:hover{background:rgba(255,255,255,.55);}
+  .mm-label{position:absolute;transform:translate(-50%,-50%);background:#fff;border:1px solid var(--border-strong);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--text-2);cursor:pointer;z-index:2;white-space:nowrap;}
   .team-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
   .team-chip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border-strong);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .12s,background .12s;}
   .team-chip:hover{border-color:var(--accent);}
@@ -169,7 +213,7 @@ const SUPABASE_URL = "https://werchlgurtcsivgkhyqg.supabase.co";
 const SUPABASE_KEY = "sb_publishable_pckkUzxE7uGvW2mpezmPnw_F5JBiAYH";
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true } });
 
-let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [], escalas: [], subtarefas: [], reprogramacoes: [], mensagens: [] };
+let DB = { usuarios: [], tarefas: [], comentarios: [], notificacoes: [], temas: [], categorias: [], criterios: [], avaliacoes: [], avaliacoesNotas: [], equipes: [], especialidades: [], ferias: [], historico: [], escalas: [], subtarefas: [], reprogramacoes: [], mensagens: [], mapasMentais: [] };
 let SESSION = null;
 let deviosChart = null;
 let STATE = {
@@ -193,6 +237,15 @@ let STATE = {
   reprogramarOpen: null,
   reprogramacaoRecusarOpen: null,
   chatEquipeAtiva: null,
+  searchOpen: false,
+  offlineMode: false,
+  agendaMes: null,
+  agendaDiaSelecionado: null,
+  brainstormTab: "notas",
+  mindmapFocoId: null,
+  mindmapDonoId: null,
+  mindmapBusca: "",
+  mindmapCompartilharOpen: false,
   navOpen: false,
   busy: false,
   submitting: false
@@ -218,10 +271,24 @@ function toast(msg){
   setTimeout(()=>el.remove(), 4500);
 }
 async function mutate(promise){
+  if(STATE.offlineMode){ toast("Você está offline — essa ação exige conexão com a internet."); return false; }
   const { error } = await promise;
   if(error){ toast("Erro: " + error.message); return false; }
   await loadAll();
   return true;
+}
+function cacheDataLocally(){
+  try{
+    localStorage.setItem("gt_cache_data", JSON.stringify(DB));
+    localStorage.setItem("gt_cache_time", new Date().toISOString());
+  }catch(e){}
+}
+function loadCachedData(){
+  try{
+    const raw = localStorage.getItem("gt_cache_data");
+    if(raw){ DB = JSON.parse(raw); return true; }
+  }catch(e){}
+  return false;
 }
 
 // ---------- DATA LOADING ----------
@@ -236,7 +303,7 @@ async function loadPublicOrg(){
   if(!es.error) DB.especialidades = es.data || [];
 }
 async function loadAll(){
-  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi,esc_,sub,rep,msg] = await Promise.all([
+  const [u,t,c,n,tm,ci,ca,av,avn,eq,es,fe,hi,esc_,sub,rep,msg,mm] = await Promise.all([
     sb.from("usuarios").select("*"),
     sb.from("tarefas").select("*"),
     sb.from("comentarios_tarefa").select("*"),
@@ -253,7 +320,8 @@ async function loadAll(){
     sb.from("escalas").select("*").order("data_inicio", { ascending:true }),
     sb.from("subtarefas").select("*"),
     sb.from("reprogramacoes").select("*"),
-    sb.from("mensagens_equipe").select("*").order("criado_em", { ascending:true })
+    sb.from("mensagens_equipe").select("*").order("criado_em", { ascending:true }),
+    sb.from("mapas_mentais").select("*")
   ]);
   DB.usuarios = u.data || [];
   DB.tarefas = t.data || [];
@@ -272,7 +340,9 @@ async function loadAll(){
   DB.subtarefas = sub.data || [];
   DB.reprogramacoes = rep.data || [];
   DB.mensagens = msg.data || [];
+  DB.mapasMentais = mm.data || [];
   rankingCache = {};
+  cacheDataLocally();
 }
 
 function getUser(id){ return DB.usuarios.find(u => u.id === id); }
@@ -374,10 +444,14 @@ function render(){
   else if(STATE.screen === "equipes") app.innerHTML = cu ? renderShell(cu, "equipes", "Equipes", renderEquipesContent()) : renderMenu();
   else if(STATE.screen === "mapa") app.innerHTML = cu ? renderShell(cu, "mapa", "Mapa da Equipe", renderMapaEquipeContent(cu)) : renderMenu();
   else if(STATE.screen === "escala") app.innerHTML = cu ? renderShell(cu, "escala", "Minha Escala", renderEscalaContent(cu)) : renderMenu();
+  else if(STATE.screen === "agenda") app.innerHTML = cu ? renderShell(cu, "agenda", "Agenda", renderAgendaContent(cu)) : renderMenu();
+  else if(STATE.screen === "brainstorm") app.innerHTML = cu ? renderShell(cu, "brainstorm", "Brainstorm", renderBrainstormContent(cu)) : renderMenu();
   else if(STATE.screen === "chat") app.innerHTML = cu ? renderShell(cu, "chat", "Chat da Equipe", renderChatContent(cu)) : renderMenu();
 
   if(STATE.openTaskId){ document.body.insertAdjacentHTML("beforeend", renderTaskModal()); }
+  if(STATE.searchOpen){ document.body.insertAdjacentHTML("beforeend", renderGlobalSearchOverlay()); }
   if(STATE.screen === "main" && STATE.tab === "equipe" && STATE.equipeSub === "desvios"){ setTimeout(renderDeviosChart, 0); }
+  if(STATE.screen === "dashboard" && cu){ setTimeout(() => renderWeeklyChart(cu), 0); }
   if(STATE.screen === "chat"){ setTimeout(() => { const box = document.getElementById("chat-scroll"); if(box) box.scrollTop = box.scrollHeight; }, 0); }
 }
 
@@ -389,6 +463,8 @@ function renderShell(cu, activeKey, pageTitle, contentHtml){
     { key:"dashboard", label:"Dashboard", icon:"&#127968;" },
     { key:"minhas", label:"Minhas tarefas", icon:"&#128203;" },
     { key:"escala", label:"Minha Escala", icon:"&#128197;" },
+    { key:"agenda", label:"Agenda", icon:"&#128198;" },
+    { key:"brainstorm", label:"Brainstorm", icon:"&#128161;" },
     ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
     ...(hasTeam ? [{ key:"mapa", label:"Mapa da Equipe", icon:"&#128506;" }] : []),
     ...(getEquipesRelevantes(cu).length ? [{ key:"chat", label:"Chat da Equipe", icon:"&#128172;" }] : []),
@@ -418,11 +494,15 @@ function renderShell(cu, activeKey, pageTitle, contentHtml){
       <div class="top-header">
         <button class="ghost hamburger-btn" onclick="STATE.navOpen=true;render()" aria-label="Abrir menu">&#9776;</button>
         <span style="font-weight:700;font-size:14px;">${esc(pageTitle)}</span>
-        <button class="ghost" style="position:relative;" onclick="toggleNotif()" aria-label="Notificações">
-          &#128276;${unread ? `<span style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--danger);"></span>` : ""}
-        </button>
+        <div class="row">
+          <button class="ghost" onclick="toggleGlobalSearch()" aria-label="Buscar">&#128269;</button>
+          <button class="ghost" style="position:relative;" onclick="toggleNotif()" aria-label="Notificações">
+            &#128276;${unread ? `<span style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--danger);"></span>` : ""}
+          </button>
+        </div>
       </div>
       ${STATE.notifOpen ? renderNotifDrop(notifs) : ""}
+      ${STATE.offlineMode ? `<div style="background:var(--warn-bg);color:var(--warn-text);text-align:center;padding:6px;font-size:12px;font-weight:700;">&#9888; Modo offline — mostrando os últimos dados salvos. Algumas ações exigem internet.</div>` : ""}
       <div class="container" style="margin:0;max-width:none;">${contentHtml}</div>
     </div>
   </div>`;
@@ -437,6 +517,8 @@ function goSection(key){
   else if(key === "equipes") go("equipes");
   else if(key === "mapa") go("mapa");
   else if(key === "escala") go("escala");
+  else if(key === "agenda") go("agenda");
+  else if(key === "brainstorm") go("brainstorm");
   else if(key === "chat") go("chat");
   else if(key === "perfil") go("perfil");
 }
@@ -450,19 +532,37 @@ function renderDashboard(cu){
   const hora = new Date().getHours();
   const saudacao = hora < 12 ? "Bom dia" : (hora < 18 ? "Boa tarde" : "Boa noite");
   const primeiroNome = cu.nome.split(" ")[0];
+  const dataFormatada = new Date().toLocaleDateString("pt-BR", { day:"numeric", month:"long", year:"numeric" });
+  const diaSemana = new Date().toLocaleDateString("pt-BR", { weekday:"long" });
+
+  const statCard = (icon, color, bg, value, label) => `<div style="background:var(--surface-2);border-radius:12px;padding:14px 12px;">
+    <div style="width:30px;height:30px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px;">${icon}</div>
+    <div style="font-size:22px;font-weight:800;color:${color};">${value}</div>
+    <p class="muted-text" style="margin:0;">${label}</p>
+  </div>`;
 
   const main = `
-    <h1 style="margin-bottom:4px;">${saudacao}, ${esc(primeiroNome)}! &#128075;</h1>
-    <p class="muted-text" style="margin-bottom:20px;">Acompanhe o progresso das suas tarefas e da sua equipe.</p>
+    <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+      <div>
+        <h1 style="margin-bottom:4px;">${saudacao}, ${esc(primeiroNome)}! &#128075;</h1>
+        <p class="muted-text" style="margin:0;">${esc(dataFormatada)} · ${esc(diaSemana)}</p>
+      </div>
+      <button class="primary" onclick="goSection('minhas');STATE.showProposeForm=true;render()">+ Nova tarefa</button>
+    </div>
+    <p class="muted-text" style="margin:8px 0 20px;">Acompanhe o progresso das suas tarefas e da sua equipe.</p>
+    <div class="grid3" style="gap:10px;margin-bottom:16px;">
+      ${statCard("&#9989;","var(--ok)","var(--ok-bg)",concluidas,"Concluída(s)")}
+      ${statCard("&#9203;","var(--info)","var(--info-bg)",andamento,"Em andamento")}
+      ${statCard("&#128203;","var(--text)","var(--surface)",afazer,"A fazer")}
+      ${statCard("&#9888;","var(--danger)","var(--danger-bg)",atrasadas,"Atrasada(s)")}
+    </div>
     <div class="card" style="margin-bottom:16px;">
       <p class="muted-text" style="margin-bottom:8px;">Minha performance</p>
-      <div class="row" style="align-items:center;gap:20px;flex-wrap:wrap;">
+      <div class="row" style="align-items:center;gap:24px;flex-wrap:wrap;">
         ${perf ? `<div style="flex-shrink:0;width:220px;">${gaugeSvg(perf.pct)}</div>` : `<p class="empty-hint" style="flex-shrink:0;width:220px;">Sem tarefas concluídas ainda.</p>`}
-        <div class="grid3" style="flex:1;min-width:220px;gap:8px;">
-          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;color:var(--ok);">${concluidas}</div><p class="muted-text" style="margin:0;">Concluída(s)</p></div>
-          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;color:var(--info);">${andamento}</div><p class="muted-text" style="margin:0;">Em andamento</p></div>
-          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;">${afazer}</div><p class="muted-text" style="margin:0;">A fazer</p></div>
-          <div style="background:var(--surface-2);border-radius:10px;text-align:center;padding:12px 6px;"><div style="font-size:20px;font-weight:800;color:var(--danger);">${atrasadas}</div><p class="muted-text" style="margin:0;">Atrasada(s)</p></div>
+        <div style="flex:1;min-width:240px;">
+          <p class="muted-text" style="margin:0 0 6px;">Produtividade semanal · tarefas concluídas por dia</p>
+          <div style="position:relative;height:120px;"><canvas id="weekly-chart"></canvas></div>
         </div>
       </div>
     </div>
@@ -484,20 +584,63 @@ function renderDashboard(cu){
   `;
   return `<div class="app-layout"><div class="container" style="margin:0;flex:1;min-width:0;max-width:none;">${main}</div><div class="sidebar-panel" style="display:block;position:static;">${side}</div></div>`;
 }
+let weeklyChartInstance = null;
+function renderWeeklyChart(cu){
+  const canvas = document.getElementById("weekly-chart");
+  if(!canvas || typeof Chart === "undefined") return;
+  const tasks = tasksFor(cu.id).filter(t => t.status === "concluida" && t.concluido_em);
+  const labels = [], counts = [];
+  for(let i=6;i>=0;i--){
+    const d = new Date(); d.setDate(d.getDate()-i);
+    const key = d.toISOString().slice(0,10);
+    labels.push(d.toLocaleDateString("pt-BR",{ weekday:"short" }).replace(".",""));
+    counts.push(tasks.filter(t => t.concluido_em.slice(0,10) === key).length);
+  }
+  if(weeklyChartInstance){ weeklyChartInstance.destroy(); weeklyChartInstance = null; }
+  weeklyChartInstance = new Chart(canvas, {
+    type: "line",
+    data: { labels, datasets: [{ data: counts, borderColor:"#1c8a4b", backgroundColor:"rgba(28,138,75,.12)", fill:true, tension:.35, pointRadius:3, pointBackgroundColor:"#1c8a4b" }] },
+    options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } },
+      scales:{ x:{ grid:{ display:false }, ticks:{ color:"#8a9691", font:{ size:10 } } },
+               y:{ beginAtZero:true, ticks:{ stepSize:1, color:"#8a9691", font:{ size:10 } }, grid:{ color:"#e1e6e2" } } } }
+  });
+}
 
-function renderMenu(){
-  return `
-  <div class="brand-stripe"></div>
-  <div class="container" style="max-width:380px;padding-top:70px;text-align:center;">
-    <div class="avatar" style="width:56px;height:56px;font-size:26px;margin:0 auto 16px;border-radius:16px;background:linear-gradient(135deg,var(--brand-green),var(--brand-blue));color:#fff;">&#9881;</div>
-    <h1 style="margin-bottom:4px;">Gestão de tarefas</h1>
-    <p class="muted-text" style="margin-bottom:24px;">Consulte a estrutura da empresa sem login, ou entre para gerenciar suas tarefas.</p>
-    <div style="display:flex;flex-direction:column;gap:8px;">
-      <button onclick="openOrgFromMenu()">Consultar organograma</button>
-      <button class="primary" onclick="STATE.authMode='login';go('login')">Entrar</button>
-      <button class="ghost small" onclick="STATE.authMode='signup';go('login')">Criar conta</button>
+function renderAuthHero(){
+  const totalPessoas = DB.usuarios.filter(u=>u.ativo!==false).length;
+  const totalEquipes = DB.equipes.length;
+  return `<div class="auth-hero">
+    <span class="auth-gear-bg auth-gear-1">&#9881;</span>
+    <span class="auth-gear-bg auth-gear-2">&#9881;</span>
+    <span class="auth-gear-bg auth-gear-3">&#9881;</span>
+    <div class="auth-hero-inner">
+    <div class="row" style="gap:12px;margin-bottom:22px;">
+      <div class="avatar" style="width:52px;height:52px;font-size:24px;border-radius:14px;background:linear-gradient(135deg,var(--brand-green),var(--brand-blue));color:#fff;"><span class="auth-logo-spin">&#9881;</span></div>
+      <span style="font-size:23px;font-weight:800;letter-spacing:-.02em;">GESTÃO DE TAREFAS</span>
     </div>
-  </div>`;
+    <p style="font-size:16px;color:#cfe0ee;margin:0 0 20px;">Engenharia, organização e <span style="color:var(--brand-gold);font-weight:700;">performance</span> em um só lugar.</p>
+    <div>
+      <span class="auth-badge">&#128200; Produtividade</span>
+      <span class="auth-badge">&#127919; Controle</span>
+      <span class="auth-badge">&#127942; Resultados</span>
+    </div>
+    <div class="auth-stats">
+      <div class="auth-stat-card"><div style="font-size:22px;font-weight:800;">${totalPessoas}</div><p style="margin:0;font-size:12px;color:#a9c1d6;">colaborador(es) cadastrado(s)</p></div>
+      <div class="auth-stat-card"><div style="font-size:22px;font-weight:800;">${totalEquipes}</div><p style="margin:0;font-size:12px;color:#a9c1d6;">equipe(s) ativa(s)</p></div>
+    </div>
+  </div></div>`;
+}
+function renderAuthShell(){
+  const inner = STATE.authMode === "signup" ? renderSignupForm() : renderLoginForm();
+  return `<div class="auth-shell">${renderAuthHero()}<div class="auth-panel-wrap"><div class="auth-card">${inner}</div></div></div>`;
+}
+function togglePasswordVisibility(inputId, btn){
+  const input = document.getElementById(inputId);
+  input.type = input.type === "password" ? "text" : "password";
+  btn.style.opacity = input.type === "text" ? "1" : "";
+}
+function renderMenu(){
+  return renderAuthShell();
 }
 async function openOrgFromMenu(){ await loadPublicOrg(); go("org"); }
 
@@ -666,6 +809,376 @@ async function sendMensagemEquipe(equipeId){
   await mutate(sb.from("mensagens_equipe").insert({ equipe_id: equipeId, usuario_id: STATE.currentUserId, texto }));
   render();
   setTimeout(() => { const box = document.getElementById("chat-scroll"); if(box) box.scrollTop = box.scrollHeight; }, 0);
+}
+const NOMES_MES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho","Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+function mudarMesAgenda(delta){
+  const [ano, mes] = STATE.agendaMes.split("-").map(Number);
+  const d = new Date(ano, mes - 1 + delta, 1);
+  STATE.agendaMes = d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+  STATE.agendaDiaSelecionado = null;
+  render();
+}
+function renderAgendaContent(cu){
+  if(!STATE.agendaMes) STATE.agendaMes = todayISO().slice(0,7);
+  const [ano, mes] = STATE.agendaMes.split("-").map(Number);
+  const primeiroDiaSemana = new Date(ano, mes-1, 1).getDay();
+  const diasNoMes = new Date(ano, mes, 0).getDate();
+
+  const eventosPorDia = {};
+  const addEvento = (dataStr, tipo, texto) => {
+    if(!dataStr) return;
+    (eventosPorDia[dataStr] = eventosPorDia[dataStr] || []).push({ tipo, texto });
+  };
+  tasksFor(cu.id).forEach(t => {
+    if(!["concluida","cancelada","recusada","pendente_aprovacao"].includes(t.status)) addEvento(t.prazo, "tarefa", t.titulo);
+  });
+  DB.ferias.filter(f => f.usuario_id === cu.id).forEach(f => addEvento(f.data_inicio, "ferias", "Início de férias"));
+  DB.escalas.filter(e => e.usuario_id === cu.id).forEach(e => addEvento(e.data_inicio, "escala", `${e.turno} · ${e.frente}`));
+
+  const iconePorTipo = { tarefa:"&#128203;", ferias:"&#127796;", escala:"&#128197;" };
+  const corPorTipo = { tarefa:"var(--danger)", ferias:"var(--ok)", escala:"var(--info)" };
+
+  let grid = `<div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:14px;">
+      <button class="small ghost" onclick="mudarMesAgenda(-1)" aria-label="Mês anterior">&#8592;</button>
+      <span style="font-weight:800;">${NOMES_MES[mes-1]} de ${ano}</span>
+      <button class="small ghost" onclick="mudarMesAgenda(1)" aria-label="Próximo mês">&#8594;</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center;">
+      ${["D","S","T","Q","Q","S","S"].map(d=>`<div class="muted-text" style="font-size:11px;font-weight:800;padding:4px 0;">${d}</div>`).join("")}
+      ${Array(primeiroDiaSemana).fill("<div></div>").join("")}
+      ${Array.from({ length: diasNoMes }, (_, i) => {
+        const dia = i+1;
+        const dataStr = `${ano}-${String(mes).padStart(2,"0")}-${String(dia).padStart(2,"0")}`;
+        const eventos = eventosPorDia[dataStr] || [];
+        const hoje = dataStr === todayISO();
+        const selecionado = STATE.agendaDiaSelecionado === dataStr;
+        let temNota = false;
+        try{ temNota = !!localStorage.getItem(`gt_agenda_nota_${cu.id}_${dataStr}`); }catch(e){}
+        const pontos = eventos.slice(0,3).map(e=>`<span style="width:5px;height:5px;border-radius:50%;background:${corPorTipo[e.tipo]};"></span>`).join("")
+          + (temNota ? `<span style="width:5px;height:5px;border-radius:50%;background:var(--brand-gold);"></span>` : "");
+        return `<div onclick="STATE.agendaDiaSelecionado='${dataStr}';render()" style="cursor:pointer;padding:8px 2px;border-radius:8px;${selecionado?'background:var(--accent-bg);':''}${hoje&&!selecionado?'box-shadow:inset 0 0 0 2px var(--brand-blue);':''}">
+          <div style="font-size:13px;font-weight:${hoje?'800':'600'};">${dia}</div>
+          <div style="display:flex;justify-content:center;gap:2px;margin-top:3px;height:6px;">${pontos}</div>
+        </div>`;
+      }).join("")}
+    </div>
+  </div>`;
+
+  if(STATE.agendaDiaSelecionado){
+    const eventos = eventosPorDia[STATE.agendaDiaSelecionado] || [];
+    let notaTexto = "";
+    try{ notaTexto = localStorage.getItem(`gt_agenda_nota_${cu.id}_${STATE.agendaDiaSelecionado}`) || ""; }catch(e){}
+    grid += `<div class="card" style="margin-top:14px;">
+      <h3 style="margin-bottom:10px;">${fmtDate(STATE.agendaDiaSelecionado)}</h3>
+      ${eventos.length ? eventos.map(e => `<p style="font-size:13px;margin:0 0 8px;">${iconePorTipo[e.tipo]} ${esc(e.texto)}</p>`).join("") : `<p class="empty-hint">Nada agendado nesse dia.</p>`}
+      <label class="field-label" style="margin-top:10px;">Minhas anotações do dia</label>
+      <textarea id="agenda-nota" rows="4" placeholder="Escreva algo sobre esse dia..." oninput="salvarNotaAgenda('${cu.id}','${STATE.agendaDiaSelecionado}')" style="resize:vertical;">${esc(notaTexto)}</textarea>
+      <p class="muted-text" id="agenda-nota-status" style="margin-top:6px;">Salvo automaticamente neste navegador.</p>
+    </div>`;
+  }
+
+  return `<h1 style="margin-bottom:4px;">Agenda</h1>
+  <p class="muted-text" style="margin-bottom:16px;">Prazos de tarefas, férias e escalas, mais suas próprias anotações. &#128203; tarefa · &#127796; férias · &#128197; escala · &#128221; anotação.</p>
+  ${grid}`;
+}
+function salvarNotaAgenda(userId, dataStr){
+  const el = document.getElementById("agenda-nota");
+  if(!el) return;
+  try{
+    localStorage.setItem(`gt_agenda_nota_${userId}_${dataStr}`, el.value);
+    const status = document.getElementById("agenda-nota-status");
+    if(status) status.textContent = "Salvo · " + new Date().toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  }catch(e){}
+}
+
+// ---------- Brainstorm ----------
+function renderBrainstormContent(cu){
+  if(!STATE.brainstormTab) STATE.brainstormTab = "notas";
+  return `<h1 style="margin-bottom:4px;">Brainstorm</h1>
+  <p class="muted-text" style="margin-bottom:16px;">Notas rápidas (só neste navegador) e um mapa mental salvo no banco, compartilhável com quem você autorizar.</p>
+  <div class="tabs" style="margin-top:0;">
+    <button class="small ${STATE.brainstormTab==='notas'?'active':''}" onclick="STATE.brainstormTab='notas';render()">Notas</button>
+    <button class="small ${STATE.brainstormTab==='mapa'?'active':''}" onclick="STATE.brainstormTab='mapa';render()">Mapa Mental</button>
+  </div>
+  ${STATE.brainstormTab === "mapa" ? renderMindmapContent(cu) : renderBrainstormNotas(cu)}`;
+}
+function renderBrainstormNotas(cu){
+  let texto = "";
+  try{ texto = localStorage.getItem("gt_brainstorm_"+cu.id) || ""; }catch(e){}
+  return `<div class="card">
+    <textarea id="brainstorm-text" rows="16" placeholder="Escreva suas ideias aqui..." oninput="salvarBrainstorm('${cu.id}')" style="resize:vertical;">${esc(texto)}</textarea>
+    <p class="muted-text" id="brainstorm-status" style="margin-top:8px;">Salvo automaticamente neste navegador.</p>
+  </div>`;
+}
+function salvarBrainstorm(userId){
+  const el = document.getElementById("brainstorm-text");
+  if(!el) return;
+  try{
+    localStorage.setItem("gt_brainstorm_"+userId, el.value);
+    const status = document.getElementById("brainstorm-status");
+    if(status) status.textContent = "Salvo · " + new Date().toLocaleTimeString("pt-BR", { hour:"2-digit", minute:"2-digit" });
+  }catch(e){}
+}
+
+// ---------- Mapa mental (salvo no banco, compartilhável) ----------
+const MM_PALETTE = ["#e63946","#1660ae","#f0b400","#1c8a4b","#7c5cbf","#e07b39","#0f9b8e","#d63384"];
+function findMindmapNode(tree, id){
+  if(tree.id === id) return tree;
+  for(const filho of (tree.filhos||[])){ const found = findMindmapNode(filho, id); if(found) return found; }
+  return null;
+}
+function findMindmapParent(tree, id){
+  for(const filho of (tree.filhos||[])){
+    if(filho.id === id) return tree;
+    const found = findMindmapParent(filho, id);
+    if(found) return found;
+  }
+  return null;
+}
+function removeMindmapNode(tree, id){
+  tree.filhos = (tree.filhos||[]).filter(f => f.id !== id);
+  tree.filhos.forEach(f => removeMindmapNode(f, id));
+}
+function findMindmapPath(tree, targetId, caminhoAtual){
+  caminhoAtual = caminhoAtual || [];
+  const novoCaminho = [...caminhoAtual, tree];
+  if(tree.id === targetId) return novoCaminho;
+  for(const f of (tree.filhos||[])){
+    const resultado = findMindmapPath(f, targetId, novoCaminho);
+    if(resultado) return resultado;
+  }
+  return null;
+}
+function searchMindmap(tree, termo, resultados){
+  resultados = resultados || [];
+  if(tree.texto.toLowerCase().includes(termo)) resultados.push(tree);
+  (tree.filhos||[]).forEach(f => searchMindmap(f, termo, resultados));
+  return resultados;
+}
+function getViewedMindmapRow(cu){
+  const donoId = STATE.mindmapDonoId || cu.id;
+  return DB.mapasMentais.find(m => m.dono_id === donoId) || null;
+}
+async function ensureMindmapRow(userId){
+  let row = DB.mapasMentais.find(m => m.dono_id === userId);
+  if(row) return row;
+  const { data, error } = await sb.from("mapas_mentais").insert({ dono_id: userId }).select().single();
+  if(error){ toast("Erro ao criar mapa mental: " + error.message); return null; }
+  DB.mapasMentais.push(data);
+  return data;
+}
+async function saveMindmapTree(rowId, tree){
+  await mutate(sb.from("mapas_mentais").update({ arvore: tree, atualizado_em: new Date().toISOString() }).eq("id", rowId));
+}
+async function mindmapAddNode(userId, parentId){
+  const texto = prompt("Texto da nova ideia:");
+  if(!texto || !texto.trim()) return;
+  const row = await ensureMindmapRow(STATE.mindmapDonoId || userId);
+  if(!row) return;
+  const tree = row.arvore;
+  const parent = findMindmapNode(tree, parentId);
+  if(parent){
+    parent.filhos = parent.filhos || [];
+    parent.filhos.push({ id: uid(), texto: texto.trim(), rotulo:"", link:"", filhos: [] });
+    await saveMindmapTree(row.id, tree);
+    render();
+  }
+}
+async function mindmapEditNode(userId, nodeId){
+  const row = getViewedMindmapRow(currentUser());
+  if(!row) return;
+  const tree = row.arvore;
+  const node = findMindmapNode(tree, nodeId);
+  if(!node) return;
+  const novo = prompt("Editar texto da ideia:", node.texto);
+  if(novo === null || !novo.trim()) return;
+  node.texto = novo.trim();
+  await saveMindmapTree(row.id, tree);
+  render();
+}
+async function mindmapEditRotulo(userId, nodeId){
+  const row = getViewedMindmapRow(currentUser());
+  if(!row) return;
+  const tree = row.arvore;
+  const node = findMindmapNode(tree, nodeId);
+  if(!node) return;
+  const novo = prompt("Rótulo dessa ligação:", node.rotulo || "");
+  if(novo === null) return;
+  node.rotulo = novo.trim();
+  await saveMindmapTree(row.id, tree);
+  render();
+}
+async function mindmapEditLink(userId, nodeId){
+  const row = getViewedMindmapRow(currentUser());
+  if(!row) return;
+  const tree = row.arvore;
+  const node = findMindmapNode(tree, nodeId);
+  if(!node) return;
+  const novo = prompt("Link (URL) associado a essa ideia:", node.link || "");
+  if(novo === null) return;
+  node.link = novo.trim();
+  await saveMindmapTree(row.id, tree);
+  render();
+}
+async function mindmapDeleteNode(userId, nodeId){
+  if(nodeId === "root") return;
+  if(!confirm("Remover essa ideia e tudo que estiver ligado a ela?")) return;
+  const row = getViewedMindmapRow(currentUser());
+  if(!row) return;
+  const tree = row.arvore;
+  removeMindmapNode(tree, nodeId);
+  await saveMindmapTree(row.id, tree);
+  if(!findMindmapNode(tree, STATE.mindmapFocoId)) STATE.mindmapFocoId = "root";
+  render();
+}
+async function mindmapMoveNode(userId, nodeId, direcao){
+  const row = getViewedMindmapRow(currentUser());
+  if(!row) return;
+  const tree = row.arvore;
+  const pai = findMindmapParent(tree, nodeId);
+  if(!pai) return;
+  const idx = pai.filhos.findIndex(f => f.id === nodeId);
+  const novoIdx = idx + direcao;
+  if(novoIdx < 0 || novoIdx >= pai.filhos.length) return;
+  [pai.filhos[idx], pai.filhos[novoIdx]] = [pai.filhos[novoIdx], pai.filhos[idx]];
+  await saveMindmapTree(row.id, tree);
+  render();
+}
+async function mindmapVirarTarefa(userId, nodeId){
+  const row = getViewedMindmapRow(currentUser());
+  if(!row) return;
+  const node = findMindmapNode(row.arvore, nodeId);
+  if(!node) return;
+  const cu = currentUser();
+  const tema = DB.temas[0];
+  if(!tema){ toast("Cadastre um tema antes de transformar em tarefa."); return; }
+  const prazo = new Date(); prazo.setDate(prazo.getDate()+7);
+  const ok = await mutate(sb.from("tarefas").insert({
+    titulo: node.texto, tema_id: tema.id, prioridade:"Média", prazo: prazo.toISOString().slice(0,10),
+    status:"a_fazer", origem:"liderado", criado_por: cu.id, atribuido_a: cu.id
+  }));
+  if(ok) toast(`Tarefa "${node.texto}" criada — ajuste tema e prazo em "Minhas tarefas".`);
+}
+function mindmapFocar(nodeId){ STATE.mindmapFocoId = nodeId; STATE.mindmapBusca = ""; render(); }
+function updateMindmapSearch(){
+  const input = document.getElementById("mindmap-busca-input");
+  const container = document.getElementById("mindmap-search-results");
+  if(!input || !container) return;
+  STATE.mindmapBusca = input.value;
+  const termo = input.value.trim().toLowerCase();
+  if(termo.length < 2){ container.innerHTML = ""; return; }
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row){ container.innerHTML = ""; return; }
+  const foco = findMindmapNode(row.arvore, STATE.mindmapFocoId) || row.arvore;
+  const achados = searchMindmap(row.arvore, termo).filter(n2 => n2.id !== foco.id);
+  container.innerHTML = achados.length
+    ? `<div class="card" style="margin-bottom:12px;"><p class="field-label">Resultados</p>${achados.map(n2 => `<button class="small ghost" style="margin:0 6px 6px 0;" onclick="mindmapFocar('${n2.id}')">${esc(n2.texto)}</button>`).join("")}</div>`
+    : `<div class="card" style="margin-bottom:12px;"><p class="empty-hint">Nada encontrado.</p></div>`;
+}
+async function mindmapCompartilhar(userId, alvoId){
+  const row = await ensureMindmapRow(userId);
+  if(!row) return;
+  const lista = new Set(row.compartilhado_com || []);
+  if(lista.has(alvoId)) lista.delete(alvoId); else lista.add(alvoId);
+  await mutate(sb.from("mapas_mentais").update({ compartilhado_com: [...lista] }).eq("id", row.id));
+  render();
+}
+function renderMindmapContent(cu){
+  if(!STATE.mindmapDonoId) STATE.mindmapDonoId = cu.id;
+  let row = getViewedMindmapRow(cu);
+  if(!row){
+    return `<div class="card"><p class="empty-hint" style="margin-bottom:10px;">Você ainda não tem um mapa mental — crie o primeiro.</p>
+      <button class="primary" onclick="ensureMindmapRow('${cu.id}').then(render)"><span style="margin-right:4px;">+</span>Criar meu mapa mental</button>
+    </div>`;
+  }
+  const tree = row.arvore;
+  const souDono = row.dono_id === cu.id;
+  if(!STATE.mindmapFocoId) STATE.mindmapFocoId = "root";
+  let foco = findMindmapNode(tree, STATE.mindmapFocoId);
+  if(!foco){ STATE.mindmapFocoId = "root"; foco = tree; }
+  const filhos = foco.filhos || [];
+  const n = filhos.length;
+  const caminho = findMindmapPath(tree, foco.id) || [tree];
+
+  // seletor de mapas visíveis (o meu + os compartilhados comigo)
+  const mapasVisiveis = DB.mapasMentais.filter(m => m.dono_id === cu.id || (m.compartilhado_com||[]).includes(cu.id));
+  const seletor = mapasVisiveis.length > 1 ? `<select style="width:auto;margin-bottom:12px;" onchange="STATE.mindmapDonoId=this.value;STATE.mindmapFocoId='root';render()">
+    ${mapasVisiveis.map(m => `<option value="${m.dono_id}" ${STATE.mindmapDonoId===m.dono_id?'selected':''}>${m.dono_id===cu.id?'Meu mapa':'Mapa de '+esc(getUser(m.dono_id)?.nome||'?')}</option>`).join("")}
+  </select>` : "";
+
+  // busca
+  let buscaHtml = "";
+  if(STATE.mindmapBusca && STATE.mindmapBusca.trim().length >= 2){
+    const achados = searchMindmap(tree, STATE.mindmapBusca.trim().toLowerCase()).filter(n2 => n2.id !== foco.id);
+    buscaHtml = `<div class="card" style="margin-bottom:12px;">
+      <p class="field-label">Resultados</p>
+      ${achados.length ? achados.map(n2 => `<button class="small ghost" style="margin:0 6px 6px 0;" onclick="mindmapFocar('${n2.id}')">${esc(n2.texto)}</button>`).join("") : `<p class="empty-hint">Nada encontrado.</p>`}
+    </div>`;
+  }
+
+  let svgLinks = "";
+  let nodesHtml = `<div class="mm-node mm-center" style="left:50%;top:50%;" onclick="mindmapEditNode('${cu.id}','${foco.id}')">${esc(foco.texto)}</div>`;
+
+  filhos.forEach((filho, i) => {
+    const angulo = (360 / n) * i - 90;
+    const rad = angulo * Math.PI / 180;
+    const x = 50 + 38 * Math.cos(rad);
+    const y = 50 + 38 * Math.sin(rad);
+    const cor = MM_PALETTE[i % MM_PALETTE.length];
+    const dx = x - 50, dy = y - 50;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const nx = -dy/len, ny = dx/len;
+    const bend = 7;
+    const ctrlX = 50 + dx/2 + nx*bend;
+    const ctrlY = 50 + dy/2 + ny*bend;
+
+    svgLinks += `<path d="M 50 50 Q ${ctrlX.toFixed(1)} ${ctrlY.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="0.6" />`;
+
+    nodesHtml += `<div class="mm-node" style="left:${x}%;top:${y}%;background:${cor};" onclick="mindmapFocar('${filho.id}')">
+      <span onclick="event.stopPropagation();mindmapEditNode('${cu.id}','${filho.id}')">${esc(filho.texto)}${filho.filhos && filho.filhos.length ? ` (${filho.filhos.length})` : ""}</span>
+      ${filho.link ? `<div onclick="event.stopPropagation();window.open('${esc(filho.link)}','_blank')" style="font-size:11px;margin-top:2px;">&#128279;</div>` : ""}
+      <div class="mm-node-actions" onclick="event.stopPropagation();">
+        <button onclick="mindmapMoveNode('${cu.id}','${filho.id}',-1)" aria-label="Mover pra esquerda">&#9664;</button>
+        <button onclick="mindmapAddNode('${cu.id}','${filho.id}')" aria-label="Adicionar ideia ligada">+</button>
+        <button onclick="mindmapDeleteNode('${cu.id}','${filho.id}')" aria-label="Remover">&minus;</button>
+        <button onclick="mindmapMoveNode('${cu.id}','${filho.id}',1)" aria-label="Mover pra direita">&#9654;</button>
+      </div>
+      <div class="row" style="justify-content:center;gap:4px;margin-top:3px;" onclick="event.stopPropagation();">
+        <button class="small ghost" style="font-size:10px;padding:2px 6px;" onclick="mindmapEditLink('${cu.id}','${filho.id}')">&#128279; link</button>
+        <button class="small ghost" style="font-size:10px;padding:2px 6px;" onclick="mindmapVirarTarefa('${cu.id}','${filho.id}')">&#10132; tarefa</button>
+      </div>
+    </div>`;
+    nodesHtml += `<div class="mm-label" style="left:${ctrlX}%;top:${ctrlY}%;" onclick="mindmapEditRotulo('${cu.id}','${filho.id}')">${esc(filho.rotulo || ("Ideia_"+(i+1)))}</div>`;
+  });
+
+  const breadcrumb = caminho.map((n2,i) => `<button class="link-btn" onclick="mindmapFocar('${n2.id}')" style="${i===caminho.length-1?'font-weight:800;text-decoration:none;':''}">${esc(n2.texto)}</button>`).join(` <span class="muted-text">&#8250;</span> `);
+
+  return `${seletor}
+  <div class="row" style="flex-wrap:wrap;margin-bottom:10px;">${breadcrumb}</div>
+  <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap;">
+    <input id="mindmap-busca-input" placeholder="Buscar no mapa..." value="${esc(STATE.mindmapBusca||'')}" oninput="updateMindmapSearch()" style="max-width:240px;" />
+    ${souDono ? `<button class="small ghost" onclick="STATE.mindmapCompartilharOpen=!STATE.mindmapCompartilharOpen;render()">&#128101; Compartilhar</button>` : `<span class="badge accent">Mapa compartilhado com você</span>`}
+  </div>
+  ${STATE.mindmapCompartilharOpen && souDono ? `<div class="card" style="margin-bottom:12px;">
+    <p class="field-label">Quem pode ver e editar esse mapa</p>
+    ${DB.usuarios.filter(u=>u.id!==cu.id && u.ativo!==false).map(u => `<label class="row" style="gap:8px;padding:4px 0;cursor:pointer;">
+      <input type="checkbox" style="width:auto;" ${(row.compartilhado_com||[]).includes(u.id)?'checked':''} onchange="mindmapCompartilhar('${cu.id}','${u.id}')" />
+      <span style="font-size:13px;">${esc(u.nome)}</span>
+    </label>`).join("")}
+  </div>` : ""}
+  <div id="mindmap-search-results">${buscaHtml}</div>
+  <div class="card">
+    <div class="row" style="justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
+      <p class="muted-text" style="margin:0;">Clique numa bolha pra entrar · rótulo pra renomear a ligação · &#9664;&#9654; pra reordenar.</p>
+      <button class="small" onclick="mindmapAddNode('${cu.id}','${foco.id}')"><span style="margin-right:4px;">+</span>Nova ideia aqui</button>
+    </div>
+    <div class="mm-canvas">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
+      ${nodesHtml}
+    </div>
+  </div>`;
 }
 function renderEscalaContent(cu){
   const atual = getAlocacaoAtual(cu.id);
@@ -922,25 +1435,28 @@ function renderEquipesContent(){
 
 // ---------- Login / Signup ----------
 function renderLogin(){
-  if(STATE.authMode === "signup") return renderSignup();
-  return `<div class="container" style="max-width:360px;padding-top:80px;">
-    <button class="ghost small" onclick="go('menu')" style="margin-bottom:16px;">&larr; Voltar</button>
-    <h1 style="margin-bottom:6px;">Entrar</h1>
-    <p class="muted-text" style="margin-bottom:18px;">Use o e-mail e senha da sua conta.</p>
-    <label class="field-label">E-mail</label>
-    <input id="login-email" type="email" style="margin-bottom:10px;" />
-    <label class="field-label">Senha</label>
-    <input id="login-senha" type="password" style="margin-bottom:16px;" />
-    <button class="primary" style="width:100%;margin-bottom:10px;" onclick="doLogin()" ${STATE.busy?'disabled':''}>${STATE.busy?'Entrando…':'Entrar'}</button>
-    <p style="text-align:center;"><button class="link-btn" onclick="STATE.authMode='signup';render()">Ainda não tenho conta</button></p>
-  </div>`;
+  return renderAuthShell();
 }
-function renderSignup(){
+function renderLoginForm(){
+  return `
+    <div class="avatar" style="width:48px;height:48px;font-size:22px;border-radius:14px;background:linear-gradient(135deg,var(--brand-green),var(--brand-blue));color:#fff;margin:0 auto 14px;">&#9881;</div>
+    <h1 style="text-align:center;margin-bottom:4px;">Acesse sua conta</h1>
+    <p class="muted-text" style="text-align:center;margin-bottom:22px;">Gerencie equipes, prazos e resultados com clareza.</p>
+    <label class="field-label">E-mail</label>
+    <div class="input-icon-wrap"><span class="icon-left">&#9993;</span><input id="login-email" type="email" placeholder="seu@email.com" /></div>
+    <label class="field-label">Senha</label>
+    <div class="input-icon-wrap"><span class="icon-left">&#128274;</span><input id="login-senha" type="password" placeholder="Sua senha" /><button type="button" class="icon-right" onclick="togglePasswordVisibility('login-senha', this)" aria-label="Mostrar senha">&#128065;</button></div>
+    <button class="btn-cta" style="margin:8px 0 14px;" onclick="doLogin()" ${STATE.busy?'disabled':''}>${STATE.busy?'Entrando…':'Entrar &#8594;'}</button>
+    <div class="auth-divider">ou</div>
+    <button style="width:100%;margin-bottom:14px;" onclick="openOrgFromMenu()"><span style="margin-right:6px;">&#9776;</span>Consultar organograma</button>
+    <p style="text-align:center;font-size:13px;">Ainda não tem acesso? <button class="link-btn" onclick="STATE.authMode='signup';render()">Criar conta</button></p>
+  `;
+}
+function renderSignupForm(){
   const lideres = DB.usuarios.filter(u => u.ativo !== false);
-  return `<div class="container" style="max-width:360px;padding-top:60px;">
-    <button class="ghost small" onclick="STATE.authMode='login';render()" style="margin-bottom:16px;">&larr; Voltar</button>
-    <h1 style="margin-bottom:6px;">Criar conta</h1>
-    <p class="muted-text" style="margin-bottom:18px;">Escolha quem é seu líder direto na hierarquia.</p>
+  return `
+    <h1 style="text-align:center;margin-bottom:4px;">Criar conta</h1>
+    <p class="muted-text" style="text-align:center;margin-bottom:18px;">Escolha quem é seu líder direto na hierarquia.</p>
     <label class="field-label">Nome completo</label>
     <input id="su-nome" style="margin-bottom:10px;" />
     <label class="field-label">Cargo</label>
@@ -965,12 +1481,12 @@ function renderSignup(){
       ${lideres.map(l=>`<option value="${l.id}">${esc(l.nome)} — ${esc(l.cargo)}</option>`).join("")}
     </select>
     <label class="field-label">E-mail</label>
-    <input id="su-email" type="email" style="margin-bottom:10px;" />
+    <div class="input-icon-wrap"><span class="icon-left">&#9993;</span><input id="su-email" type="email" /></div>
     <label class="field-label">Senha</label>
-    <input id="su-senha" type="password" style="margin-bottom:16px;" />
-    <button class="primary" style="width:100%;margin-bottom:10px;" onclick="doSignup()" ${STATE.busy?'disabled':''}>${STATE.busy?'Criando…':'Criar conta'}</button>
-    <p style="text-align:center;"><button class="link-btn" onclick="STATE.authMode='login';render()">Já tenho conta</button></p>
-  </div>`;
+    <div class="input-icon-wrap"><span class="icon-left">&#128274;</span><input id="su-senha" type="password" /><button type="button" class="icon-right" onclick="togglePasswordVisibility('su-senha', this)" aria-label="Mostrar senha">&#128065;</button></div>
+    <button class="btn-cta" style="margin-top:4px;margin-bottom:10px;" onclick="doSignup()" ${STATE.busy?'disabled':''}>${STATE.busy?'Criando…':'Criar conta &#8594;'}</button>
+    <p style="text-align:center;font-size:13px;">Já tem conta? <button class="link-btn" onclick="STATE.authMode='login';render()">Entrar</button></p>
+  `;
 }
 async function doLogin(){
   const email = document.getElementById("login-email").value.trim();
@@ -1042,6 +1558,7 @@ async function afterLogin(session){
   if(!getUser(STATE.currentUserId)){
     toast("Seu perfil ainda está sendo criado, tente novamente em instantes.");
   }
+  try{ localStorage.setItem("gt_last_user_id", session.user.id); }catch(e){}
   STATE.tab = "minhas"; STATE.view = "kanban";
   setupRealtime();
   go("dashboard");
@@ -1068,6 +1585,44 @@ function renderMain(){
 }
 
 function toggleNotif(){ STATE.notifOpen = !STATE.notifOpen; render(); }
+function toggleGlobalSearch(){
+  STATE.searchOpen = !STATE.searchOpen;
+  render();
+  if(STATE.searchOpen){ setTimeout(() => { const el = document.getElementById("global-search-input"); if(el) el.focus(); }, 30); }
+}
+function buildSearchResultsHtml(q){
+  if(q.length < 2) return `<p class="empty-hint">Digite ao menos 2 letras pra buscar.</p>`;
+  const tarefasResult = DB.tarefas.filter(t => t.titulo.toLowerCase().includes(q)).slice(0,8);
+  const pessoasResult = DB.usuarios.filter(u => u.ativo !== false && (u.nome.toLowerCase().includes(q) || (u.cargo||"").toLowerCase().includes(q))).slice(0,8);
+  let html = "";
+  if(tarefasResult.length){
+    html += `<p class="field-label">Tarefas</p>` + tarefasResult.map(t => `<div class="task-card" style="--strip:${farolStripColor(t)};margin-bottom:6px;" onclick="toggleGlobalSearch();openTask('${t.id}')">
+      <p style="font-size:13px;font-weight:700;margin:0 0 4px;">${esc(t.titulo)}</p>${badgeHtml(t)}
+    </div>`).join("");
+  }
+  if(pessoasResult.length){
+    html += `<p class="field-label" style="margin-top:10px;">Pessoas</p>` + pessoasResult.map(u => `<div class="row" style="gap:8px;padding:8px 4px;border-top:1px solid var(--border);">${avatarHtml(u,26)}<div><div style="font-size:13px;font-weight:700;">${esc(u.nome)}</div><div class="muted-text">${esc(u.cargo)}</div></div></div>`).join("");
+  }
+  if(!tarefasResult.length && !pessoasResult.length) html = `<p class="empty-hint">Nada encontrado.</p>`;
+  return html;
+}
+function updateSearchResults(){
+  const input = document.getElementById("global-search-input");
+  const container = document.getElementById("search-results-container");
+  if(!input || !container) return;
+  container.innerHTML = buildSearchResultsHtml(input.value.trim().toLowerCase());
+}
+function renderGlobalSearchOverlay(){
+  return `<div class="modal-overlay" onclick="if(event.target===this) toggleGlobalSearch()">
+    <div class="modal" style="max-width:480px;">
+      <div class="row" style="justify-content:space-between;margin-bottom:12px;">
+        <h2>Buscar</h2><button class="ghost small" onclick="toggleGlobalSearch()" aria-label="Fechar">&#10005;</button>
+      </div>
+      <input id="global-search-input" placeholder="Buscar tarefas, pessoas..." oninput="updateSearchResults()" style="margin-bottom:14px;" />
+      <div id="search-results-container" style="max-height:50vh;overflow-y:auto;">${buildSearchResultsHtml("")}</div>
+    </div>
+  </div>`;
+}
 
 // ---------- Perfil ----------
 function renderPerfilContent(){
@@ -1249,6 +1804,9 @@ function getEquipesRelevantes(cu){
   getDirectReports(cu.id).forEach(r => { if(r.equipe_id) ids.add(r.equipe_id); });
   return [...ids];
 }
+function posicaoRanking(i){
+  return { 0:"&#129351;", 1:"&#129352;", 2:"&#129353;" }[i] || `<span class="mono">${i+1}º</span>`;
+}
 function renderRankingCardFor(cu, equipeId){
   ensureRanking(equipeId);
   const monthKey = new Date().toISOString().slice(0,7);
@@ -1262,7 +1820,7 @@ function renderRankingCardFor(cu, equipeId){
   return `<div class="card" style="margin-bottom:16px;">
     <p class="muted-text" style="margin-bottom:8px;">&#127942; Ranking · ${esc(nomeEquipe)} · ${esc(mesNome)}</p>
     ${ranked.map((r,i) => `<div class="row" style="justify-content:space-between;padding:5px 6px;border-radius:6px;${r.u.id===cu.id?'background:var(--accent-bg);':''}">
-      <div class="row" style="gap:8px;"><span class="mono" style="width:20px;">${i+1}º</span>${avatarHtml(r.u,24)}<span style="font-size:13px;font-weight:${r.u.id===cu.id?'800':'600'};">${esc(r.u.nome)}</span></div>
+      <div class="row" style="gap:8px;"><span style="width:22px;text-align:center;font-size:15px;">${posicaoRanking(i)}</span>${avatarHtml(r.u,24)}<span style="font-size:13px;font-weight:${r.u.id===cu.id?'800':'600'};">${esc(r.u.nome)}</span></div>
       <span class="badge accent">${r.pontos} pts</span>
     </div>`).join("")}
   </div>`;
@@ -1290,11 +1848,11 @@ function renderMinhasTarefas(cu){
       </div>`; }).join("")}
     </div>` : ""}
     <div class="ranking-inline">${renderRankingCard(cu)}</div>
-    ${renderViewSwitcher()}
-    ${renderTaskViews(tasks, true)}
-    <div style="margin-top:20px;">
+    <div style="margin-bottom:16px;">
       ${STATE.showProposeForm ? renderProposeForm(cu) : `<button onclick="STATE.showProposeForm=true;render()"><span style="margin-right:4px;">+</span>Nova tarefa</button>`}
-    </div>`;
+    </div>
+    ${renderViewSwitcher()}
+    ${renderTaskViews(tasks, true)}`;
 }
 function renderProposeForm(cu){
   return `<div class="card">
@@ -1826,7 +2384,8 @@ function farolStripColor(t){
 function prioridadeIcon(p){ return { Alta:"&#128293;", Média:"&#9889;", Baixa:"&#127793;" }[p] || ""; }
 function taskCardHtml(t, showAssignee){
   const assignee = getUser(t.atribuido_a);
-  return `<div class="task-card" style="--strip:${farolStripColor(t)};" onclick="openTask('${t.id}')">
+  const canDrag = t.atribuido_a === STATE.currentUserId && ["a_fazer","em_andamento","concluida"].includes(t.status);
+  return `<div class="task-card" style="--strip:${farolStripColor(t)};" ${canDrag?`draggable="true" ondragstart="onDragStartTask(event,'${t.id}')" ondragend="onDragEndTask(event)"`:""} onclick="openTask('${t.id}')">
     <p style="font-size:13.5px;font-weight:700;margin:0 0 7px;">${esc(t.titulo)}</p>
     <div class="row" style="justify-content:space-between;margin-bottom:7px;">
       <div class="row" style="gap:5px;">
@@ -1847,11 +2406,32 @@ const PRIORIDADE_STYLE = {
   Média: { icon:"&#9889;",  grad:"linear-gradient(135deg,#f0b400,#c68e00)" },
   Baixa: { icon:"&#127793;", grad:"linear-gradient(135deg,#1660ae,#0f4a86)" }
 };
-function kanbanColHtml(title, count, bodyHtml, style){
+let draggedTaskId = null;
+function onDragStartTask(event, taskId){
+  draggedTaskId = taskId;
+  event.dataTransfer.effectAllowed = "move";
+  try{ event.dataTransfer.setData("text/plain", taskId); }catch(e){}
+}
+function onDragEndTask(event){ draggedTaskId = null; }
+async function onDropTask(event, newStatus){
+  event.preventDefault();
+  event.currentTarget.classList.remove("kanban-col-dragover");
+  const taskId = draggedTaskId || (event.dataTransfer && event.dataTransfer.getData("text/plain"));
+  draggedTaskId = null;
+  if(!taskId) return;
+  const t = DB.tarefas.find(x => x.id === taskId);
+  if(!t || t.status === newStatus || t.atribuido_a !== STATE.currentUserId) return;
+  await mutate(sb.from("tarefas").update({ status: newStatus }).eq("id", taskId));
+  render();
+}
+function kanbanColHtml(title, count, bodyHtml, style, dropStatus){
   const headerBg = style ? `background:${style.grad};` : "";
   const titleColor = style ? "color:#fff;" : "";
   const countStyle = style ? "background:rgba(255,255,255,.28);color:#fff;" : "";
-  return `<div class="kanban-col">
+  const dropAttrs = dropStatus
+    ? `ondragover="event.preventDefault();this.classList.add('kanban-col-dragover');" ondragleave="this.classList.remove('kanban-col-dragover');" ondrop="onDropTask(event,'${dropStatus}')"`
+    : "";
+  return `<div class="kanban-col" ${dropAttrs}>
     <div class="kanban-col-header" style="${headerBg}border-radius:9px;padding:8px 10px;margin-bottom:2px;">
       <span class="kanban-col-title" style="${titleColor}">${style?style.icon+" ":""}${title}</span>
       <span class="kanban-col-count" style="${countStyle}">${count}</span>
@@ -1865,7 +2445,7 @@ function renderTaskViews(tasks){
     const cols = { a_fazer: [], em_andamento: [], concluida: [] };
     tasks.forEach(t => { if(cols[t.status]) cols[t.status].push(t); });
     return `<div class="grid3">${["a_fazer","em_andamento","concluida"].map(s =>
-      kanbanColHtml(statusLabel(s), (cols[s]||[]).length, (cols[s]||[]).map(t=>taskCardHtml(t, true)).join(""), STATUS_STYLE[s])
+      kanbanColHtml(statusLabel(s), (cols[s]||[]).length, (cols[s]||[]).map(t=>taskCardHtml(t, true)).join(""), STATUS_STYLE[s], s)
     ).join("")}</div>`;
   }
   if(STATE.view === "lista"){
@@ -2196,9 +2776,23 @@ async function resolverImpedimento(taskId){
 // ---------- init ----------
 (async function init(){
   render();
-  const { data: { session } } = await sb.auth.getSession();
-  if(session){ await afterLogin(session); }
-  else{ await loadPublicOrg(); STATE.screen = "menu"; render(); }
+  try{
+    const { data: { session }, error } = await sb.auth.getSession();
+    if(error) throw error;
+    if(session){ await afterLogin(session); }
+    else{ await loadPublicOrg(); STATE.screen = "menu"; render(); }
+  }catch(err){
+    const cachedUserId = (() => { try{ return localStorage.getItem("gt_last_user_id"); }catch(e){ return null; } })();
+    if(cachedUserId && loadCachedData() && getUser(cachedUserId)){
+      STATE.currentUserId = cachedUserId;
+      STATE.offlineMode = true;
+      STATE.tab = "minhas"; STATE.view = "kanban";
+      go("dashboard");
+      toast("Sem conexão — mostrando os últimos dados salvos neste navegador.");
+    }else{
+      STATE.screen = "menu"; render();
+    }
+  }
 })();
 
 if("serviceWorker" in navigator){
