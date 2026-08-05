@@ -1883,14 +1883,18 @@ async function submitPropose(userId){
   if(!titulo) return;
   STATE.submitting = true; render();
   const cu = getUser(userId);
-  const ok = await mutate(sb.from("tarefas").insert({
+  const { data, error } = await sb.from("tarefas").insert({
     titulo, tema_id: temaId, prioridade:"Média", prazo, status:"a_fazer",
     origem:"liderado", criado_por: userId, atribuido_a: userId
-  }));
-  if(ok && cu.lider_id) await addNotif(cu.lider_id, "tarefa_criada", `${cu.nome} criou a tarefa "${titulo}"`);
-  STATE.showProposeForm = false;
+  }).select().single();
   STATE.submitting = false;
-  await loadAll(); render();
+  if(error){ toast("Erro ao criar tarefa: " + error.message); render(); return; }
+  DB.tarefas.push(data);
+  if(cu.lider_id) addNotif(cu.lider_id, "tarefa_criada", `${cu.nome} criou a tarefa "${titulo}"`);
+  STATE.showProposeForm = false;
+  render();
+  lastManualLoadAt = Date.now();
+  loadAll();
 }
 
 // ---------- Minha equipe ----------
@@ -2137,13 +2141,17 @@ async function submitNewTask(){
   const prazo = document.getElementById("nt-prazo").value || todayISO();
   if(!titulo) return;
   STATE.submitting = true; render();
-  const ok = await mutate(sb.from("tarefas").insert({
+  const { data, error } = await sb.from("tarefas").insert({
     titulo, tema_id: temaId, prioridade, prazo, status:"a_fazer",
     origem:"lider", criado_por: STATE.currentUserId, atribuido_a: atribuidoA
-  }));
-  if(ok) STATE.showNewTaskForm = false;
+  }).select().single();
   STATE.submitting = false;
+  if(error){ toast("Erro ao criar tarefa: " + error.message); render(); return; }
+  DB.tarefas.push(data);
+  STATE.showNewTaskForm = false;
   render();
+  lastManualLoadAt = Date.now();
+  loadAll();
 }
 
 function renderFila(cu, fila){
