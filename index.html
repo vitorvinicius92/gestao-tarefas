@@ -327,24 +327,24 @@ async function loadAll(){
     sb.from("mensagens_equipe").select("*").order("criado_em", { ascending:true }),
     sb.from("mapas_mentais").select("*")
   ]);
-  DB.usuarios = u.data || [];
-  DB.tarefas = t.data || [];
-  DB.comentarios = c.data || [];
-  DB.notificacoes = n.data || [];
-  DB.temas = tm.data || [];
-  DB.categorias = ci.data || [];
-  DB.criterios = ca.data || [];
-  DB.avaliacoes = av.data || [];
-  DB.avaliacoesNotas = avn.data || [];
-  DB.equipes = eq.data || [];
-  DB.especialidades = es.data || [];
-  DB.ferias = fe.data || [];
-  DB.historico = hi.data || [];
-  DB.escalas = esc_.data || [];
-  DB.subtarefas = sub.data || [];
-  DB.reprogramacoes = rep.data || [];
-  DB.mensagens = msg.data || [];
-  DB.mapasMentais = mm.data || [];
+  if(!u.error) DB.usuarios = u.data || DB.usuarios;
+  if(!t.error) DB.tarefas = t.data || DB.tarefas;
+  if(!c.error) DB.comentarios = c.data || DB.comentarios;
+  if(!n.error) DB.notificacoes = n.data || DB.notificacoes;
+  if(!tm.error) DB.temas = tm.data || DB.temas;
+  if(!ci.error) DB.categorias = ci.data || DB.categorias;
+  if(!ca.error) DB.criterios = ca.data || DB.criterios;
+  if(!av.error) DB.avaliacoes = av.data || DB.avaliacoes;
+  if(!avn.error) DB.avaliacoesNotas = avn.data || DB.avaliacoesNotas;
+  if(!eq.error) DB.equipes = eq.data || DB.equipes;
+  if(!es.error) DB.especialidades = es.data || DB.especialidades;
+  if(!fe.error) DB.ferias = fe.data || DB.ferias;
+  if(!hi.error) DB.historico = hi.data || DB.historico;
+  if(!esc_.error) DB.escalas = esc_.data || DB.escalas;
+  if(!sub.error) DB.subtarefas = sub.data || DB.subtarefas;
+  if(!rep.error) DB.reprogramacoes = rep.data || DB.reprogramacoes;
+  if(!msg.error) DB.mensagens = msg.data || DB.mensagens;
+  if(!mm.error) DB.mapasMentais = mm.data || DB.mapasMentais;
   rankingCache = {};
   cacheDataLocally();
 }
@@ -2712,12 +2712,24 @@ function renderTaskModal(){
   </div>`;
 }
 async function changeStatus(taskId, status){
-  await mutate(sb.from("tarefas").update({ status }).eq("id", taskId));
+  const t = DB.tarefas.find(x => x.id === taskId);
+  if(!t) return;
+  const anterior = t.status;
+  t.status = status;
   openTask(taskId);
+  const { error } = await sb.from("tarefas").update({ status }).eq("id", taskId);
+  if(error){ t.status = anterior; toast("Erro ao salvar: " + error.message); openTask(taskId); }
+  else{ lastManualLoadAt = Date.now(); loadAll(); }
 }
 async function changePrioridade(taskId, prioridade){
-  await mutate(sb.from("tarefas").update({ prioridade }).eq("id", taskId));
+  const t = DB.tarefas.find(x => x.id === taskId);
+  if(!t) return;
+  const anterior = t.prioridade;
+  t.prioridade = prioridade;
   openTask(taskId);
+  const { error } = await sb.from("tarefas").update({ prioridade }).eq("id", taskId);
+  if(error){ t.prioridade = anterior; toast("Erro ao salvar: " + error.message); openTask(taskId); }
+  else{ lastManualLoadAt = Date.now(); loadAll(); }
 }
 async function cancelarTarefa(taskId){
   if(!confirm("Cancelar esta tarefa? Ela sai da lista ativa, mas o histórico continua registrado.")) return;
