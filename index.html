@@ -377,8 +377,8 @@ function tasksForSubtree(id){
 function temaNome(id){ const t = DB.temas.find(x=>x.id===id); return t ? t.nome : "Geral"; }
 function equipeNome(id){ const e = DB.equipes.find(x=>x.id===id); return e ? e.nome : null; }
 function especialidadeNome(id){ const e = DB.especialidades.find(x=>x.id===id); return e ? e.nome : null; }
-function addNotif(usuarioId, tipo, mensagem){
-  return sb.from("notificacoes").insert({ usuario_id: usuarioId, tipo, mensagem });
+function addNotif(usuarioId, tipo, mensagem, tarefaId){
+  return sb.from("notificacoes").insert({ usuario_id: usuarioId, tipo, mensagem, tarefa_id: tarefaId || null });
 }
 
 function farolInfo(t){
@@ -1069,7 +1069,7 @@ async function submitAcao(userId){
   STATE.submitting = false;
   if(error){ toast("Erro ao criar a\u00e7\u00e3o: " + error.message); render(); return; }
   DB.tarefas.push(data);
-  addNotif(atribuidoA, "acao_atribuida", `${cu.nome} (${si?si.nome:'setor'}) atribuiu a a\u00e7\u00e3o "${titulo}" a voc\u00ea`);
+  addNotif(atribuidoA, "acao_atribuida", `${cu.nome} (${si?si.nome:'setor'}) atribuiu a a\u00e7\u00e3o "${titulo}" a voc\u00ea`, data.id);
   toast("A\u00e7\u00e3o atribu\u00edda.");
   render();
   lastManualLoadAt = Date.now();
@@ -1907,10 +1907,26 @@ async function salvarPerfil(){
 }
 function renderNotifDrop(notifs){
   if(!notifs.length) return `<div class="notif-drop"><p class="empty-hint">Nenhuma notificação.</p></div>`;
-  return `<div class="notif-drop">${notifs.slice(0,20).map(n => `
-    <div class="notif-item ${n.lida?'':'unread'}" style="cursor:pointer;" onclick="markRead('${n.id}')">
-      ${esc(n.mensagem)}<div class="muted-text" style="margin-top:3px;">${new Date(n.criado_em).toLocaleString("pt-BR")}</div>
-    </div>`).join("")}</div>`;
+  return `<div class="notif-drop">${notifs.slice(0,20).map(n => {
+    const temTarefa = !!n.tarefa_id && DB.tarefas.some(t => t.id === n.tarefa_id);
+    return `<div class="notif-item ${n.lida?'':'unread'}" style="cursor:pointer;" onclick="abrirNotificacao('${n.id}', ${temTarefa ? `'${n.tarefa_id}'` : 'null'})">
+      ${esc(n.mensagem)}
+      <div class="row" style="justify-content:space-between;margin-top:3px;">
+        <span class="muted-text">${new Date(n.criado_em).toLocaleString("pt-BR")}</span>
+        ${temTarefa ? `<span class="muted-text" style="font-size:11px;">abrir &#8250;</span>` : ""}
+      </div>
+    </div>`;
+  }).join("")}</div>`;
+}
+async function abrirNotificacao(notifId, tarefaId){
+  const n = DB.notificacoes.find(x => x.id === notifId);
+  if(n && !n.lida){
+    n.lida = true;
+    sb.from("notificacoes").update({ lida:true }).eq("id", notifId).then(() => {});
+  }
+  STATE.notifOpen = false;
+  if(tarefaId){ openTask(tarefaId); }
+  else { render(); }
 }
 async function markRead(id){ await mutate(sb.from("notificacoes").update({ lida:true }).eq("id", id)); render(); }
 function setTab(t){ STATE.tab = t; STATE.view = "kanban"; render(); }
@@ -2115,7 +2131,7 @@ async function submitPropose(userId){
   STATE.submitting = false;
   if(error){ toast("Erro ao criar tarefa: " + error.message); render(); return; }
   DB.tarefas.push(data);
-  if(cu.lider_id) addNotif(cu.lider_id, "tarefa_criada", `${cu.nome} criou a tarefa "${titulo}"`);
+  if(cu.lider_id) addNotif(cu.lider_id, "tarefa_criada", `${cu.nome} criou a tarefa "${titulo}"`, data.id);
   STATE.showProposeForm = false;
   render();
   lastManualLoadAt = Date.now();
@@ -2800,7 +2816,7 @@ async function solicitarReprogramacao(taskId){
   const ok = await mutate(sb.from("reprogramacoes").insert({
     tarefa_id: taskId, solicitado_por: cu.id, prazo_atual: t.prazo, prazo_sugerido: novoPrazo, justificativa
   }));
-  if(ok && cu.lider_id) await addNotif(cu.lider_id, "reprogramacao_solicitada", `${cu.nome} pediu pra mudar o prazo de "${t.titulo}"`);
+  if(ok && cu.lider_id) await addNotif(cu.lider_id, "reprogramacao_solicitada", `${cu.nome} pediu pra mudar o prazo de "${t.titulo}"`, taskId);
   STATE.reprogramarOpen = null;
   await loadAll(); openTask(taskId);
 }
@@ -2810,7 +2826,7 @@ async function aprovarReprogramacao(reprogId, taskId){
   if(okTarefa){
     await sb.from("reprogramacoes").update({ status:"aprovada", decidido_por: STATE.currentUserId, decidido_em: new Date().toISOString() }).eq("id", reprogId);
     const t = DB.tarefas.find(x => x.id === taskId);
-    if(t) await addNotif(t.atribuido_a, "reprogramacao_aprovada", `Seu novo prazo pra "${t.titulo}" foi aprovado: ${fmtDate(r.prazo_sugerido)}`);
+    if(t) await addNotif(t.atribuido_a, "reprogramacao_aprovada", `Seu novo prazo pra "${t.titulo}" foi aprovado: ${fmtDate(r.prazo_sugerido)}`, taskId);
   }
   await loadAll(); openTask(taskId);
 }
@@ -2824,7 +2840,7 @@ async function recusarReprogramacao(reprogId, taskId){
     await sb.from("tarefas").update({ prazo: novoPrazo }).eq("id", taskId);
   }
   const t = DB.tarefas.find(x => x.id === taskId);
-  if(ok && t) await addNotif(t.atribuido_a, "reprogramacao_recusada", `Seu pedido de novo prazo pra "${t.titulo}" foi recusado`);
+  if(ok && t) await addNotif(t.atribuido_a, "reprogramacao_recusada", `Seu pedido de novo prazo pra "${t.titulo}" foi recusado`, taskId);
   STATE.reprogramacaoRecusarOpen = null;
   await loadAll(); openTask(taskId);
 }
@@ -3038,7 +3054,7 @@ async function enviarImpedimento(taskId){
   if(ok){
     await sb.from("comentarios_tarefa").insert({ tarefa_id: taskId, usuario_id: cu.id, tipo:"impedimento", categoria_id: categoriaId,
       texto: `Falta ${recurso}. Não consigo avançar sem isso.` });
-    if(cu.lider_id) await addNotif(cu.lider_id, "impedimento_reportado", `${cu.nome} reportou impedimento em "${t.titulo}"`);
+    if(cu.lider_id) await addNotif(cu.lider_id, "impedimento_reportado", `${cu.nome} reportou impedimento em "${t.titulo}"`, taskId);
   }
   STATE.taskImpedimentoOpen = false;
   await loadAll(); openTask(taskId);
