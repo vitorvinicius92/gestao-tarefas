@@ -246,6 +246,9 @@ let STATE = {
   mindmapDonoId: null,
   mindmapBusca: "",
   mindmapCompartilharOpen: false,
+  acaoSetor: null,
+  painelSetor: "todos",
+  painelStatus: "todos",
   navOpen: false,
   busy: false,
   submitting: false
@@ -461,6 +464,7 @@ function render(){
   else if(STATE.screen === "agenda") app.innerHTML = cu ? renderShell(cu, "agenda", "Agenda", renderAgendaContent(cu)) : renderMenu();
   else if(STATE.screen === "brainstorm") app.innerHTML = cu ? renderShell(cu, "brainstorm", "Brainstorm", renderBrainstormContent(cu)) : renderMenu();
   else if(STATE.screen === "acoes") app.innerHTML = cu ? renderShell(cu, "acoes", "Ações setoriais", renderAcoesContent(cu)) : renderMenu();
+  else if(STATE.screen === "painelacoes") app.innerHTML = cu ? renderShell(cu, "painelacoes", "Painel de Ações", renderPainelAcoesContent(cu)) : renderMenu();
   else if(STATE.screen === "permissoes") app.innerHTML = cu ? renderShell(cu, "permissoes", "Permissões", renderPermissoesContent(cu)) : renderMenu();
   else if(STATE.screen === "chat") app.innerHTML = cu ? renderShell(cu, "chat", "Chat da Equipe", renderChatContent(cu)) : renderMenu();
 
@@ -481,6 +485,7 @@ function renderShell(cu, activeKey, pageTitle, contentHtml){
     { key:"escala", label:"Minha Escala", icon:"&#128197;" },
     { key:"agenda", label:"Agenda", icon:"&#128198;" },
     { key:"brainstorm", label:"Brainstorm", icon:"&#128161;" },
+    { key:"painelacoes", label:"Painel de A\u00e7\u00f5es", icon:"&#128203;" },
     ...(temAlgumPoder(cu) ? [{ key:"acoes", label:"A\u00e7\u00f5es setoriais", icon:"&#128204;" }] : []),
     ...(ehMestre(cu) ? [{ key:"permissoes", label:"Permiss\u00f5es", icon:"&#128273;" }] : []),
     ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
@@ -538,6 +543,7 @@ function goSection(key){
   else if(key === "agenda") go("agenda");
   else if(key === "brainstorm") go("brainstorm");
   else if(key === "acoes") go("acoes");
+  else if(key === "painelacoes") go("painelacoes");
   else if(key === "permissoes") go("permissoes");
   else if(key === "chat") go("chat");
   else if(key === "perfil") go("perfil");
@@ -913,6 +919,83 @@ function salvarNotaAgenda(userId, dataStr){
 }
 
 // ---------- Brainstorm ----------
+// ---------- Painel p\u00fablico de a\u00e7\u00f5es (somente leitura) ----------
+function statusAcao(t){
+  if(t.status === "concluida") return { label:"Feito", cls:"ok" };
+  if(t.status === "cancelada") return { label:"Cancelada", cls:"muted" };
+  if(t.status === "impedida")  return { label:"Impedida", cls:"warn" };
+  const f = farolInfo(t);
+  if(f.cls === "danger") return { label:"Atrasada", cls:"danger" };
+  return { label:"No prazo", cls:"accent" };
+}
+function renderPainelAcoesContent(cu){
+  let acoes = DB.tarefas.filter(t => t.origem === "acao");
+
+  if(STATE.painelSetor && STATE.painelSetor !== "todos")
+    acoes = acoes.filter(t => t.setor_acao === STATE.painelSetor);
+  if(STATE.painelStatus && STATE.painelStatus !== "todos")
+    acoes = acoes.filter(t => statusAcao(t).label === STATE.painelStatus);
+
+  acoes.sort((a, b) => {
+    const rank = s => ({ "Atrasada":0, "Impedida":1, "No prazo":2, "Feito":3, "Cancelada":4 })[s] ?? 5;
+    const d = rank(statusAcao(a).label) - rank(statusAcao(b).label);
+    return d !== 0 ? d : (a.prazo || "").localeCompare(b.prazo || "");
+  });
+
+  const todas = DB.tarefas.filter(t => t.origem === "acao");
+  const conta = lbl => todas.filter(t => statusAcao(t).label === lbl).length;
+
+  return `<h1 style="margin-bottom:4px;">Painel de A\u00e7\u00f5es</h1>
+  <p class="muted-text" style="margin-bottom:16px;">A\u00e7\u00f5es setoriais abertas para toda a empresa. Consulta aberta a todos \u2014 apenas o respons\u00e1vel e sua lideran\u00e7a podem atualizar.</p>
+
+  <div class="grid3" style="gap:10px;margin-bottom:16px;">
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--danger);">${conta("Atrasada")}</div><p class="muted-text" style="margin:0;">Atrasada(s)</p></div>
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--info);">${conta("No prazo")}</div><p class="muted-text" style="margin:0;">No prazo</p></div>
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--warn);">${conta("Impedida")}</div><p class="muted-text" style="margin:0;">Impedida(s)</p></div>
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--ok);">${conta("Feito")}</div><p class="muted-text" style="margin:0;">Feito</p></div>
+  </div>
+
+  <div class="row" style="gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <select style="width:auto;" onchange="STATE.painelSetor=this.value;render()">
+      <option value="todos">Todos os setores</option>
+      ${SETORES.map(s => `<option value="${s.id}" ${STATE.painelSetor===s.id?'selected':''}>${esc(s.nome)}</option>`).join("")}
+    </select>
+    <select style="width:auto;" onchange="STATE.painelStatus=this.value;render()">
+      <option value="todos">Todos os status</option>
+      ${["Atrasada","No prazo","Impedida","Feito","Cancelada"].map(s => `<option value="${s}" ${STATE.painelStatus===s?'selected':''}>${s}</option>`).join("")}
+    </select>
+  </div>
+
+  <div style="display:flex;flex-direction:column;gap:8px;">
+    ${acoes.length ? acoes.map(t => {
+      const alvo = getUser(t.atribuido_a);
+      const autor = getUser(t.criado_por);
+      const si = setorInfo(t.setor_acao);
+      const st = statusAcao(t);
+      return `<div class="card" style="border-left:4px solid ${si?si.cor:'var(--border-strong)'};">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:200px;">
+            <div class="row" style="gap:6px;margin-bottom:4px;">
+              <span title="Prioridade ${esc(t.prioridade)}">${prioridadeIcon(t.prioridade)}</span>
+              <span style="font-size:14px;font-weight:700;">${esc(t.titulo)}</span>
+            </div>
+            ${t.instrucao ? `<p class="muted-text" style="margin:0 0 6px;">${esc(t.instrucao)}</p>` : ""}
+            <p class="muted-text" style="margin:0;">
+              ${si ? si.icon + " " + esc(si.nome) + " \u00b7 " : ""}respons\u00e1vel: <strong>${alvo?esc(alvo.nome):"?"}</strong>
+              ${autor ? " \u00b7 aberta por " + esc(autor.nome) : ""}
+            </p>
+          </div>
+          <div style="text-align:right;flex-shrink:0;">
+            <div class="mono" style="font-size:12px;margin-bottom:4px;">${fmtDate(t.prazo)}</div>
+            <span class="badge ${st.cls}">${st.label}</span>
+            <div style="margin-top:4px;"><span class="badge muted">${esc(t.prioridade)}</span></div>
+          </div>
+        </div>
+      </div>`;
+    }).join("") : `<p class="empty-hint">Nenhuma a\u00e7\u00e3o nesse filtro.</p>`}
+  </div>`;
+}
+
 // ---------- A\u00e7\u00f5es setoriais ----------
 function renderAcoesContent(cu){
   const meusPoderes = poderesDe(cu);
