@@ -352,9 +352,10 @@ async function loadAll(){
 function getUser(id){ return DB.usuarios.find(u => u.id === id); }
 function getDirectReports(id){ return DB.usuarios.filter(u => u.lider_id === id && u.ativo !== false); }
 const SETORES = [
-  { id:"qualidade",  nome:"Qualidade",  icon:"&#9989;", cor:"var(--ok)" },
-  { id:"sesmt",      nome:"SESMT",      icon:"&#9937;", cor:"var(--danger)" },
-  { id:"engenharia", nome:"Engenharia", icon:"&#9881;", cor:"var(--info)" }
+  { id:"qualidade",    nome:"Qualidade",    icon:"&#9989;", cor:"var(--ok)" },
+  { id:"sesmt",        nome:"SESMT",        icon:"&#9937;", cor:"var(--danger)" },
+  { id:"engenharia",   nome:"Engenharia",   icon:"&#9881;", cor:"var(--info)" },
+  { id:"planejamento", nome:"Planejamento", icon:"&#128197;", cor:"var(--warn)" }
 ];
 function setorInfo(id){ return SETORES.find(s => s.id === id) || null; }
 function ehMestre(u){ return !!(u && u.is_mestre); }
