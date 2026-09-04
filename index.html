@@ -254,6 +254,9 @@ let STATE = {
   solicitarCancelOpen: null,
   cancelRecusarOpen: null,
   novaReuniaoOpen: false,
+  adminBusca: "",
+  adminPessoa: "todos",
+  adminStatus: "todos",
   navOpen: false,
   busy: false,
   submitting: false
@@ -475,6 +478,7 @@ function render(){
   else if(STATE.screen === "acoes") app.innerHTML = cu ? renderShell(cu, "acoes", "Ações setoriais", renderAcoesContent(cu)) : renderMenu();
   else if(STATE.screen === "painelacoes") app.innerHTML = cu ? renderShell(cu, "painelacoes", "Painel de Ações", renderPainelAcoesContent(cu)) : renderMenu();
   else if(STATE.screen === "reunioes") app.innerHTML = cu ? renderShell(cu, "reunioes", "Reuniões", renderReunioesContent(cu)) : renderMenu();
+  else if(STATE.screen === "admin") app.innerHTML = cu ? renderShell(cu, "admin", "Administração", renderAdminContent(cu)) : renderMenu();
   else if(STATE.screen === "permissoes") app.innerHTML = cu ? renderShell(cu, "permissoes", "Permissões", renderPermissoesContent(cu)) : renderMenu();
   else if(STATE.screen === "chat") app.innerHTML = cu ? renderShell(cu, "chat", "Chat da Equipe", renderChatContent(cu)) : renderMenu();
 
@@ -498,6 +502,7 @@ function renderShell(cu, activeKey, pageTitle, contentHtml){
     { key:"painelacoes", label:"Painel de A\u00e7\u00f5es", icon:"&#128203;" },
     { key:"reunioes", label:"Reuni\u00f5es", icon:"&#128197;" },
     ...(temAlgumPoder(cu) ? [{ key:"acoes", label:"A\u00e7\u00f5es setoriais", icon:"&#128204;" }] : []),
+    ...(ehMestre(cu) ? [{ key:"admin", label:"Todas as tarefas", icon:"&#128736;" }] : []),
     ...(ehMestre(cu) ? [{ key:"permissoes", label:"Permiss\u00f5es", icon:"&#128273;" }] : []),
     ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
     ...(hasTeam ? [{ key:"mapa", label:"Mapa da Equipe", icon:"&#128506;" }] : []),
@@ -556,6 +561,7 @@ function goSection(key){
   else if(key === "acoes") go("acoes");
   else if(key === "painelacoes") go("painelacoes");
   else if(key === "reunioes") go("reunioes");
+  else if(key === "admin") go("admin");
   else if(key === "permissoes") go("permissoes");
   else if(key === "chat") go("chat");
   else if(key === "perfil") go("perfil");
@@ -933,6 +939,82 @@ function salvarNotaAgenda(userId, dataStr){
 }
 
 // ---------- Brainstorm ----------
+// ---------- Administra\u00e7\u00e3o (somente mestre) ----------
+function filtrarTarefasAdmin(){
+  let lista = DB.tarefas.slice();
+  const termo = (STATE.adminBusca || "").trim().toLowerCase();
+  if(termo.length >= 2) lista = lista.filter(t => (t.titulo||"").toLowerCase().includes(termo));
+  if(STATE.adminPessoa !== "todos") lista = lista.filter(t => t.atribuido_a === STATE.adminPessoa);
+  if(STATE.adminStatus !== "todos") lista = lista.filter(t => t.status === STATE.adminStatus);
+  lista.sort((a,b) => {
+    const rank = t => t.status === "concluida" ? 2 : (t.status === "cancelada" ? 3 : (farolInfo(t).cls === "danger" ? 0 : 1));
+    const d = rank(a) - rank(b);
+    return d !== 0 ? d : (a.prazo||"").localeCompare(b.prazo||"");
+  });
+  return lista;
+}
+function adminLinhasHtml(){
+  const lista = filtrarTarefasAdmin();
+  if(!lista.length) return `<p class="empty-hint">Nenhuma tarefa nesse filtro.</p>`;
+  return lista.slice(0, 200).map(t => {
+    const resp = getUser(t.atribuido_a);
+    const si = setorInfo(t.setor_acao);
+    return `<div class="task-card row" style="justify-content:space-between;--strip:${farolStripColor(t)};" onclick="openTask('${t.id}')">
+      <div class="row" style="min-width:0;flex:1;">
+        ${resp ? avatarHtml(resp,26) : ""}
+        <div style="min-width:0;">
+          <div class="row" style="gap:5px;">
+            <span title="Prioridade ${esc(t.prioridade)}">${prioridadeIcon(t.prioridade)}</span>
+            <span style="font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(t.titulo)}</span>
+          </div>
+          <div class="muted-text">${resp?esc(resp.nome):"sem respons\u00e1vel"} \u00b7 ${esc(temaNome(t.tema_id))} \u00b7 <span class="mono">${fmtDate(t.prazo)}</span>${si?` \u00b7 ${si.icon} ${esc(si.nome)}`:""}</div>
+        </div>
+      </div>
+      <div class="row" style="flex-shrink:0;gap:6px;">
+        <span class="badge muted">${statusLabel(t.status)}</span>
+        ${badgeHtml(t)}
+      </div>
+    </div>`;
+  }).join("") + (lista.length > 200 ? `<p class="muted-text" style="text-align:center;margin-top:8px;">Mostrando as 200 primeiras de ${lista.length}. Refine a busca para ver o resto.</p>` : "");
+}
+function updateAdminBusca(){
+  const input = document.getElementById("admin-busca");
+  const box = document.getElementById("admin-lista");
+  if(!input || !box) return;
+  STATE.adminBusca = input.value;
+  box.innerHTML = adminLinhasHtml();
+}
+function renderAdminContent(cu){
+  if(!ehMestre(cu)) return `<p class="empty-hint">Somente o usu\u00e1rio mestre tem acesso a esta tela.</p>`;
+  const pessoas = DB.usuarios.filter(u => u.ativo !== false).sort((a,b) => a.nome.localeCompare(b.nome));
+  const total = DB.tarefas.length;
+  const atrasadas = DB.tarefas.filter(t => !["concluida","cancelada"].includes(t.status) && farolInfo(t).cls === "danger").length;
+  const abertas = DB.tarefas.filter(t => ["a_fazer","em_andamento","impedida"].includes(t.status)).length;
+
+  return `<h1 style="margin-bottom:4px;">Todas as tarefas</h1>
+  <p class="muted-text" style="margin-bottom:16px;">Acesso de mestre: qualquer tarefa do sistema, independente de hierarquia. Clique para abrir e editar, transferir ou cancelar.</p>
+
+  <div class="grid3" style="gap:10px;margin-bottom:16px;">
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;">${total}</div><p class="muted-text" style="margin:0;">Total no sistema</p></div>
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--info);">${abertas}</div><p class="muted-text" style="margin:0;">Em aberto</p></div>
+    <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--danger);">${atrasadas}</div><p class="muted-text" style="margin:0;">Atrasada(s)</p></div>
+  </div>
+
+  <div class="row" style="gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+    <input id="admin-busca" placeholder="Buscar por t\u00edtulo..." value="${esc(STATE.adminBusca||'')}" oninput="updateAdminBusca()" style="max-width:260px;" />
+    <select style="width:auto;" onchange="STATE.adminPessoa=this.value;render()">
+      <option value="todos">Todas as pessoas</option>
+      ${pessoas.map(p => `<option value="${p.id}" ${STATE.adminPessoa===p.id?'selected':''}>${esc(p.nome)}</option>`).join("")}
+    </select>
+    <select style="width:auto;" onchange="STATE.adminStatus=this.value;render()">
+      <option value="todos">Todos os status</option>
+      ${["a_fazer","em_andamento","impedida","concluida","cancelada"].map(s => `<option value="${s}" ${STATE.adminStatus===s?'selected':''}>${statusLabel(s)}</option>`).join("")}
+    </select>
+  </div>
+
+  <div id="admin-lista" style="display:flex;flex-direction:column;gap:8px;">${adminLinhasHtml()}</div>`;
+}
+
 // ---------- Reuni\u00f5es ----------
 function renderReunioesContent(cu){
   const hoje = todayISO();
