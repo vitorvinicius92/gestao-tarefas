@@ -975,7 +975,7 @@ function salaNome(id){ const s = DB.salas.find(x => x.id === id); return s ? s.n
 function reunioesDaSala(salaId, incluirSolicitadas, fonte){
   return (fonte || DB.reunioes)
     .filter(r => r.sala_id && (salaId === "todas" || r.sala_id === salaId))
-    .filter(r => r.status !== "recusada")
+    .filter(r => r.status !== "recusada" && r.status !== "cancelada")
     .filter(r => incluirSolicitadas || r.status === "confirmada")
     .sort((a,b) => (a.data||"").localeCompare(b.data||"") || (a.hora_inicio||"").localeCompare(b.hora_inicio||""));
 }
@@ -1316,6 +1316,7 @@ function renderSalasContent(cu){
           <div style="text-align:right;flex-shrink:0;">
             <span class="badge ${r.status==='solicitada'?'warn':'ok'}">${r.status==='solicitada'?'Solicitada':'Confirmada'}</span>
             ${conflito ? `<div style="margin-top:4px;"><span class="badge danger">&#9888; conflito</span></div>` : ""}
+            <div style="margin-top:6px;"><button class="small ghost" onclick="cancelarReuniao('${r.id}')">Cancelar</button></div>
           </div>
         </div>
       </div>`;
@@ -1400,7 +1401,7 @@ function renderSalasPublico(){
       <label class="field-label">Contato (e-mail ou ramal)</label>
       <input id="pb-contato" placeholder="Para contato, se necessário" style="margin-bottom:10px;" />
       <label class="field-label">Sala</label>
-      <select id="pb-sala" style="margin-bottom:10px;">
+      <select id="pb-sala" onchange="verificarConflitoPublico()" style="margin-bottom:10px;">
         ${salas.map(s => `<option value="${s.id}">${esc(s.nome)}${s.capacidade?` (${s.capacidade} lugares)`:''}</option>`).join("")}
       </select>
       <label class="field-label">Setor</label>
@@ -1413,11 +1414,12 @@ function renderSalasPublico(){
       <label class="field-label">Assunto da reunião</label>
       <input id="pb-titulo" placeholder="Ex: Alinhamento com fornecedor" style="margin-bottom:10px;" />
       <div class="row" style="margin-bottom:12px;">
-        <div style="flex:1.2;"><label class="field-label">Data</label><input id="pb-data" type="date" /></div>
-        <div style="flex:1;"><label class="field-label">Início *</label><input id="pb-inicio" type="time" /></div>
-        <div style="flex:1;"><label class="field-label">Fim *</label><input id="pb-fim" type="time" /></div>
+        <div style="flex:1.2;"><label class="field-label">Data</label><input id="pb-data" onchange="verificarConflitoPublico()" type="date" /></div>
+        <div style="flex:1;"><label class="field-label">Início *</label><input id="pb-inicio" onchange="verificarConflitoPublico()" type="time" /></div>
+        <div style="flex:1;"><label class="field-label">Fim *</label><input id="pb-fim" onchange="verificarConflitoPublico()" type="time" /></div>
       </div>
-      <button class="primary" style="width:100%;" onclick="submitSolicitacaoPublica()">Confirmar reserva</button>
+      <div id="pb-conflito" style="display:none;"></div>
+      <button class="primary" id="pb-btn" style="width:100%;" onclick="submitSolicitacaoPublica()">Confirmar reserva</button>
     </div>` : ""}
 
     <div class="tabs" style="margin:0 0 14px;">
@@ -1457,9 +1459,7 @@ async function submitSolicitacaoPublica(){
   if(!inicio || !fim){ toast("Informe o horário de início e fim."); return; }
   if(fim <= inicio){ toast("O horário de fim deve ser depois do início."); return; }
 
-  const choque = DB.agendaPublica.find(a =>
-    a.sala_id === salaId && a.data === data && a.hora_inicio && a.hora_fim &&
-    a.hora_inicio < fim && inicio < a.hora_fim);
+  const choque = buscarConflito(salaId, data, inicio, fim, DB.agendaPublica);
   if(choque){
     toast(`Sala ocupada nesse horário: "${choque.titulo}" das ${choque.hora_inicio} às ${choque.hora_fim}. Escolha outro horário ou outra sala.`);
     return;
@@ -1557,7 +1557,7 @@ function renderAdminContent(cu){
 // ---------- Reuniões ----------
 function renderReunioesContent(cu){
   const hoje = todayISO();
-  const todas = DB.reunioes.slice().sort((a,b) => (a.data||"").localeCompare(b.data||""));
+  const todas = DB.reunioes.filter(r => r.status !== "cancelada" && r.status !== "recusada").slice().sort((a,b) => (a.data||"").localeCompare(b.data||""));
   const proximas = todas.filter(r => r.data >= hoje);
   const passadas = todas.filter(r => r.data < hoje).reverse().slice(0, 10);
   const pessoas = DB.usuarios.filter(u => u.ativo !== false && u.id !== cu.id)
@@ -1579,7 +1579,10 @@ function renderReunioesContent(cu){
           </div>
           ${autor ? `<div class="muted-text" style="margin-top:4px;font-size:11px;">criada por ${esc(autor.nome)}</div>` : ""}
         </div>
-        ${souDono ? `<button class="small ghost" aria-label="Remover" onclick="removerReuniao('${r.id}')"><span style="color:var(--danger);">&#128465;</span></button>` : ""}
+        ${souDono ? `<div class="row" style="gap:4px;flex-shrink:0;">
+          <button class="small ghost" onclick="cancelarReuniao('${r.id}')">Cancelar</button>
+          <button class="small ghost" aria-label="Remover" onclick="removerReuniao('${r.id}')"><span style="color:var(--danger);">&#128465;</span></button>
+        </div>` : ""}
       </div>
     </div>`;
   };
@@ -1593,9 +1596,9 @@ function renderReunioesContent(cu){
       <label class="field-label">Título</label>
       <input id="re-titulo" placeholder="Ex: Alinhamento semanal de obra" style="margin-bottom:10px;" />
       <div class="row" style="margin-bottom:10px;">
-        <div style="flex:1.2;"><label class="field-label">Data</label><input id="re-data" type="date" /></div>
-        <div style="flex:1;"><label class="field-label">Início</label><input id="re-inicio" type="time" /></div>
-        <div style="flex:1;"><label class="field-label">Fim</label><input id="re-fim" type="time" /></div>
+        <div style="flex:1.2;"><label class="field-label">Data</label><input id="re-data" onchange="verificarConflitoReuniao()" type="date" /></div>
+        <div style="flex:1;"><label class="field-label">Início</label><input id="re-inicio" onchange="verificarConflitoReuniao()" type="time" /></div>
+        <div style="flex:1;"><label class="field-label">Fim</label><input id="re-fim" onchange="verificarConflitoReuniao()" type="time" /></div>
       </div>
       <label class="field-label">Setor</label>
       <select id="re-setor" style="margin-bottom:10px;">
@@ -1605,12 +1608,13 @@ function renderReunioesContent(cu){
         <option value="operacao">Operação</option>
       </select>
       <label class="field-label">Sala de reunião</label>
-      <select id="re-sala" style="margin-bottom:10px;">
+      <select id="re-sala" onchange="verificarConflitoReuniao()" style="margin-bottom:10px;">
         <option value="">Sem sala (online ou externo)</option>
         ${DB.salas.filter(s2 => s2.ativa !== false).map(s2 => `<option value="${s2.id}">${esc(s2.nome)}${s2.capacidade?` (${s2.capacidade} lugares)`:''}</option>`).join("")}
       </select>
       <label class="field-label">Local (se não for sala)</label>
       <input id="re-local" placeholder="Ex: Teams / campo" style="margin-bottom:10px;" />
+      <div id="re-conflito" style="display:none;"></div>
       <label class="field-label">Pauta</label>
       <textarea id="re-pauta" rows="2" placeholder="O que será tratado" style="margin-bottom:10px;"></textarea>
       <label class="field-label">Participantes</label>
@@ -1622,7 +1626,7 @@ function renderReunioesContent(cu){
       </div>
       <div class="row">
         <button class="ghost" onclick="STATE.novaReuniaoOpen=false;render()">Cancelar</button>
-        <button class="primary" onclick="submitReuniao('${cu.id}')">Agendar reunião</button>
+        <button class="primary" id="re-btn" onclick="submitReuniao('${cu.id}')">Agendar reunião</button>
       </div>
     </div>` : `<button onclick="STATE.novaReuniaoOpen=true;render()"><span style="margin-right:4px;">+</span>Nova reunião</button>`}
   </div>
@@ -1648,6 +1652,11 @@ async function submitReuniao(userId){
   const pauta = document.getElementById("re-pauta").value.trim();
   const participantes = [...document.querySelectorAll(".re-part:checked")].map(el => el.value);
   if(!titulo || !data){ toast("Preencha título e data."); return; }
+  if(salaId && horaInicio && horaFim){
+    if(horaFim <= horaInicio){ toast("O horário de fim deve ser depois do início."); return; }
+    const choque = buscarConflito(salaId, data, horaInicio, horaFim, DB.reunioes);
+    if(choque){ toast(`Não é possível agendar: "${choque.titulo}" já ocupa essa sala das ${choque.hora_inicio} às ${choque.hora_fim}.`); return; }
+  }
   const cu = getUser(userId);
   const { error } = await sb.from("reunioes").insert({
     titulo, data, hora_inicio: horaInicio || null, hora_fim: horaFim || null,
@@ -1659,6 +1668,61 @@ async function submitReuniao(userId){
     `${cu.nome} agendou a reunião "${titulo}" para ${fmtDate(data)}${horaInicio?' às '+horaInicio:''}`));
   STATE.novaReuniaoOpen = false;
   toast("Reunião agendada.");
+  await loadAll(); render();
+}
+function buscarConflito(salaId, data, inicio, fim, fonte, ignorarId){
+  if(!salaId || !data || !inicio || !fim) return null;
+  return (fonte || DB.reunioes).find(o =>
+    o.id !== ignorarId &&
+    o.sala_id === salaId && o.data === data &&
+    o.status !== "recusada" && o.status !== "cancelada" &&
+    o.hora_inicio && o.hora_fim &&
+    o.hora_inicio < fim && inicio < o.hora_fim
+  ) || null;
+}
+function mostrarAvisoConflito(divId, btnId, choque, inicio, fim){
+  const div = document.getElementById(divId);
+  const btn = document.getElementById(btnId);
+  if(!div) return;
+  if(inicio && fim && fim <= inicio){
+    div.style.display = "block";
+    div.innerHTML = `<div class="card" style="background:var(--danger-bg);border-color:#f0c9c2;padding:10px 12px;margin-bottom:10px;">
+      <p style="font-size:12.5px;font-weight:700;color:var(--danger-text);margin:0;">⚠ O horário de fim precisa ser depois do início.</p></div>`;
+    if(btn){ btn.disabled = true; }
+    return;
+  }
+  if(choque){
+    div.style.display = "block";
+    div.innerHTML = `<div class="card" style="background:var(--danger-bg);border-color:#f0c9c2;padding:10px 12px;margin-bottom:10px;">
+      <p style="font-size:12.5px;font-weight:700;color:var(--danger-text);margin:0 0 2px;">⚠ Não é possível agendar: já existe reunião nesse horário.</p>
+      <p style="font-size:12px;color:var(--danger-text);margin:0;">"${esc(choque.titulo)}" das ${esc(choque.hora_inicio)} às ${esc(choque.hora_fim)} — escolha outro horário ou outra sala.</p></div>`;
+    if(btn){ btn.disabled = true; }
+  }else{
+    div.style.display = "none";
+    div.innerHTML = "";
+    if(btn){ btn.disabled = false; }
+  }
+}
+function verificarConflitoReuniao(){
+  const sala = (document.getElementById("re-sala")||{}).value;
+  const data = (document.getElementById("re-data")||{}).value;
+  const ini  = (document.getElementById("re-inicio")||{}).value;
+  const fim  = (document.getElementById("re-fim")||{}).value;
+  if(!sala){ mostrarAvisoConflito("re-conflito","re-btn",null,ini,fim); return; }
+  mostrarAvisoConflito("re-conflito","re-btn", buscarConflito(sala, data, ini, fim, DB.reunioes), ini, fim);
+}
+function verificarConflitoPublico(){
+  const sala = (document.getElementById("pb-sala")||{}).value;
+  const data = (document.getElementById("pb-data")||{}).value;
+  const ini  = (document.getElementById("pb-inicio")||{}).value;
+  const fim  = (document.getElementById("pb-fim")||{}).value;
+  mostrarAvisoConflito("pb-conflito","pb-btn", buscarConflito(sala, data, ini, fim, DB.agendaPublica), ini, fim);
+}
+async function cancelarReuniao(id){
+  if(!confirm("Cancelar esta reunião? Ela sai do cronograma e libera a sala.")) return;
+  const { error } = await sb.from("reunioes").update({ status: "cancelada" }).eq("id", id);
+  if(error){ toast("Erro ao cancelar: " + error.message); return; }
+  toast("Reunião cancelada.");
   await loadAll(); render();
 }
 async function removerReuniao(id){
