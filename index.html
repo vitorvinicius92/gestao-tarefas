@@ -1308,7 +1308,7 @@ function renderSalasContent(cu){
       return `<div class="card" style="border-left:4px solid ${r.status==='solicitada'?'var(--warn)':(conflito?'var(--danger)':'var(--brand-blue)')};">
         <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
           <div style="flex:1;min-width:200px;">
-            <div style="font-size:14px;font-weight:700;">${esc(r.titulo)}</div>
+            <div style="font-size:14px;font-weight:700;">${esc(r.titulo)}${r.serie_id?` <span class="badge accent">&#128257; semanal</span>`:''}</div>
             <div class="muted-text mono">${esc(salaNome(r.sala_id)||'?')} · ${fmtDate(r.data)}${r.hora_inicio?` · ${esc(r.hora_inicio)}${r.hora_fim?'–'+esc(r.hora_fim):''}`:''}</div>
             ${r.pauta ? `<p class="muted-text" style="margin:6px 0 0;">${esc(r.pauta)}</p>` : ""}
             ${r.solicitante_nome ? `<div class="muted-text" style="font-size:11px;margin-top:4px;">solicitado por ${esc(r.solicitante_nome)}</div>` : ""}
@@ -1570,7 +1570,7 @@ function renderReunioesContent(cu){
     return `<div class="card" style="border-left:4px solid var(--brand-blue);">
       <div class="row" style="justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;">
         <div style="flex:1;min-width:200px;">
-          <div style="font-size:14px;font-weight:700;margin-bottom:3px;">${esc(r.titulo)}</div>
+          <div style="font-size:14px;font-weight:700;margin-bottom:3px;">${esc(r.titulo)}${r.serie_id?` <span class="badge accent" style="font-weight:700;">&#128257; semanal</span>`:''}</div>
           <div class="muted-text mono" style="margin-bottom:4px;">${fmtDate(r.data)}${r.hora_inicio?` · ${esc(r.hora_inicio)}${r.hora_fim?'–'+esc(r.hora_fim):''}`:''}${r.local?` · ${esc(r.local)}`:''}</div>
           ${r.pauta ? `<p class="muted-text" style="margin:0 0 6px;">${esc(r.pauta)}</p>` : ""}
           <div class="row" style="gap:4px;flex-wrap:wrap;">
@@ -1614,6 +1614,15 @@ function renderReunioesContent(cu){
       </select>
       <label class="field-label">Local (se não for sala)</label>
       <input id="re-local" placeholder="Ex: Teams / campo" style="margin-bottom:10px;" />
+      <label class="row" style="gap:8px;cursor:pointer;margin-bottom:8px;">
+        <input type="checkbox" id="re-semanal" style="width:auto;" onchange="document.getElementById('re-semanal-ate').style.display=this.checked?'block':'none';verificarConflitoReuniao()" />
+        <span style="font-size:13px;font-weight:700;">Repetir toda semana neste dia e horário</span>
+      </label>
+      <div id="re-semanal-ate" style="display:none;margin-bottom:10px;">
+        <label class="field-label">Repetir até</label>
+        <input id="re-ate" type="date" />
+        <p class="muted-text" style="margin:4px 0 0;font-size:11px;">Em branco = 12 semanas. Máximo de 26 semanas.</p>
+      </div>
       <div id="re-conflito" style="display:none;"></div>
       <label class="field-label">Pauta</label>
       <textarea id="re-pauta" rows="2" placeholder="O que será tratado" style="margin-bottom:10px;"></textarea>
@@ -1651,23 +1660,68 @@ async function submitReuniao(userId){
   const setor = document.getElementById("re-setor").value || null;
   const pauta = document.getElementById("re-pauta").value.trim();
   const participantes = [...document.querySelectorAll(".re-part:checked")].map(el => el.value);
+  const semanal = (document.getElementById("re-semanal") || {}).checked;
+  const ateRaw = (document.getElementById("re-ate") || {}).value;
+
   if(!titulo || !data){ toast("Preencha título e data."); return; }
-  if(salaId && horaInicio && horaFim){
-    if(horaFim <= horaInicio){ toast("O horário de fim deve ser depois do início."); return; }
-    const choque = buscarConflito(salaId, data, horaInicio, horaFim, DB.reunioes);
-    if(choque){ toast(`Não é possível agendar: "${choque.titulo}" já ocupa essa sala das ${choque.hora_inicio} às ${choque.hora_fim}.`); return; }
+  if(horaInicio && horaFim && horaFim <= horaInicio){ toast("O horário de fim deve ser depois do início."); return; }
+
+  // monta as datas: uma só, ou uma por semana até o limite
+  let datas = [data];
+  if(semanal){
+    const inicioD = new Date(data + "T00:00:00");
+    let limite;
+    if(ateRaw){
+      limite = new Date(ateRaw + "T00:00:00");
+      if(limite < inicioD){ toast("A data final da repetição é anterior à data da reunião."); return; }
+    }else{
+      limite = new Date(inicioD); limite.setDate(limite.getDate() + 7*11); // 12 ocorrências
+    }
+    datas = [];
+    const d = new Date(inicioD);
+    while(d <= limite && datas.length < 26){
+      datas.push(d.toISOString().slice(0,10));
+      d.setDate(d.getDate() + 7);
+    }
   }
-  const cu = getUser(userId);
-  const { error } = await sb.from("reunioes").insert({
-    titulo, data, hora_inicio: horaInicio || null, hora_fim: horaFim || null,
-    local: local || null, pauta: pauta || null, criado_por: userId, participantes,
-    sala_id: salaId, setor, status: "confirmada"
+
+  // separa as datas livres das que já têm reunião na sala
+  const livres = [], ocupadas = [];
+  datas.forEach(dt => {
+    if(salaId && horaInicio && horaFim && buscarConflito(salaId, dt, horaInicio, horaFim, DB.reunioes)) ocupadas.push(dt);
+    else livres.push(dt);
   });
+
+  if(!livres.length){
+    toast(`Não é possível agendar: a sala já está ocupada nesse horário em ${ocupadas.length === 1 ? fmtDate(ocupadas[0]) : "todas as datas da repetição"}.`);
+    return;
+  }
+  if(ocupadas.length && !confirm(
+      `${ocupadas.length} data(s) da repetição já têm reunião nessa sala e serão puladas:\n` +
+      ocupadas.map(fmtDate).join(", ") + `\n\nAgendar as outras ${livres.length}?`)) return;
+
+  const cu = getUser(userId);
+  // todas as ocorrências da série compartilham o mesmo identificador
+  const serieId = (semanal && livres.length > 1 && typeof crypto !== "undefined" && crypto.randomUUID)
+    ? crypto.randomUUID() : null;
+  const registros = livres.map(dt => {
+    const r = {
+      titulo, data: dt, hora_inicio: horaInicio || null, hora_fim: horaFim || null,
+      local: local || null, pauta: pauta || null, criado_por: userId, participantes,
+      sala_id: salaId, setor, status: "confirmada"
+    };
+    if(serieId) r.serie_id = serieId;
+    return r;
+  });
+
+  const { error } = await sb.from("reunioes").insert(registros);
   if(error){ toast("Erro ao agendar: " + error.message); return; }
+
   participantes.forEach(pid => addNotif(pid, "reuniao_agendada",
-    `${cu.nome} agendou a reunião "${titulo}" para ${fmtDate(data)}${horaInicio?' às '+horaInicio:''}`));
+    `${cu.nome} agendou a reunião "${titulo}"${semanal && livres.length>1 ? ` (toda semana, ${livres.length} datas a partir de ${fmtDate(livres[0])})` : ` para ${fmtDate(livres[0])}${horaInicio?' às '+horaInicio:''}`}`));
+
   STATE.novaReuniaoOpen = false;
-  toast("Reunião agendada.");
+  toast(livres.length > 1 ? `${livres.length} reuniões agendadas.` : "Reunião agendada.");
   await loadAll(); render();
 }
 function buscarConflito(salaId, data, inicio, fim, fonte, ignorarId){
@@ -1719,10 +1773,25 @@ function verificarConflitoPublico(){
   mostrarAvisoConflito("pb-conflito","pb-btn", buscarConflito(sala, data, ini, fim, DB.agendaPublica), ini, fim);
 }
 async function cancelarReuniao(id){
-  if(!confirm("Cancelar esta reunião? Ela sai do cronograma e libera a sala.")) return;
-  const { error } = await sb.from("reunioes").update({ status: "cancelada" }).eq("id", id);
+  const r = DB.reunioes.find(x => x.id === id);
+  if(!r) return;
+  const daSerie = r.serie_id
+    ? DB.reunioes.filter(x => x.serie_id === r.serie_id && x.data >= r.data && x.status !== "cancelada")
+    : [];
+
+  let alvo = [id];
+  if(daSerie.length > 1){
+    const todas = confirm(
+      `Esta reunião se repete toda semana (${daSerie.length} datas a partir de ${fmtDate(r.data)}).\n\n` +
+      `OK = cancelar TODAS as datas futuras\nCancelar = cancelar somente ${fmtDate(r.data)}`);
+    alvo = todas ? daSerie.map(x => x.id) : [id];
+  }else{
+    if(!confirm("Cancelar esta reunião? Ela sai do cronograma e libera a sala.")) return;
+  }
+
+  const { error } = await sb.from("reunioes").update({ status: "cancelada" }).in("id", alvo);
   if(error){ toast("Erro ao cancelar: " + error.message); return; }
-  toast("Reunião cancelada.");
+  toast(alvo.length > 1 ? `${alvo.length} reuniões canceladas.` : "Reunião cancelada.");
   await loadAll(); render();
 }
 async function removerReuniao(id){
