@@ -1,8 +1,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#0f1d17">
+<meta name="theme-color" content="#111c30">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tarefas">
@@ -11,59 +14,167 @@
 <div id="sr-desc" class="sr-only">Aplicativo de gestão de tarefas e prioridades para líderes e liderados, conectado a um banco de dados real via Supabase, com login, organograma por equipes, farol de prazos, performance, avaliação por pontos e central de notificações.</div>
 <style>
   :root{
-    --bg:#f2f4f5; --surface:#ffffff; --surface-2:#eceff1;
-    --text:#131a17; --text-2:#4b5a55; --text-3:#8a9691;
-    --border:#e0e6e2; --border-strong:#c5cec8;
-    --accent:#1660ae; --accent-bg:#e5eef8; --accent-text:#0f427e;
-    --info:#1660ae; --info-bg:#e5eef8; --info-text:#0e4a86;
-    --danger:#c0392b; --danger-bg:#fbe7e4; --danger-text:#8b271b;
-    --warn:#c68e00; --warn-bg:#fbf1d6; --warn-text:#815d00;
-    --ok:#1c8a4b; --ok-bg:#e2f3e8; --ok-text:#146639;
-    --steel-900:#0f1d17; --steel-800:#17281f; --steel-700:#22392c;
+    /* superfícies */
+    --bg:#f4f6fa; --surface:#ffffff; --surface-2:#eef1f6; --surface-3:#e5eaf2;
+    /* texto */
+    --text:#172033; --text-2:#5b6b80; --text-3:#90a0b4;
+    /* bordas */
+    --border:#e2e8f0; --border-strong:#cbd5e1;
+    /* marca PLANGECON */
     --brand-green:#1c8a4b; --brand-gold:#f0b400; --brand-blue:#1660ae;
-    --radius:10px; --radius-lg:16px;
+    --accent:#1660ae; --accent-hover:#124f8e; --accent-bg:#e8f0f9; --accent-text:#124f8e;
+    --info:#1660ae; --info-bg:#e8f0f9; --info-text:#124f8e;
+    /* status */
+    --danger:#c0392b; --danger-bg:#fdeae7; --danger-text:#8f2a1d;
+    --warn:#b97d00; --warn-bg:#fcf3dc; --warn-text:#7d5500;
+    --ok:#1c8a4b; --ok-bg:#e4f4ea; --ok-text:#136338;
+    /* menu escuro */
+    --steel-900:#111c30; --steel-800:#1b2942; --steel-700:#273751;
+    --nav-text:#cfd8e5; --nav-muted:#92a3ba;
+    /* forma */
+    --radius-sm:8px; --radius:12px; --radius-lg:16px;
+    --shadow-sm:0 1px 2px rgba(16,24,40,.05);
+    --shadow-md:0 4px 12px rgba(16,24,40,.08);
+    --shadow-lg:0 14px 36px rgba(16,24,40,.13);
+    --t:170ms cubic-bezier(.4,0,.2,1);
     --mono:"SFMono-Regular",Consolas,"Liberation Mono",Menlo,monospace;
-    font-family:-apple-system,"Segoe UI",Roboto,sans-serif;
+    font-family:"Inter",-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+    -webkit-font-smoothing:antialiased;
+    -moz-osx-font-smoothing:grayscale;
   }
+  @media(prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important;}
+  }
+  :focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:4px;}
   *{box-sizing:border-box;}
   html,body{overflow-x:hidden;max-width:100%;}
   .sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0,0,0,0);}
-  #app{background:var(--bg);color:var(--text);min-height:100vh;padding:0;}
-  button{font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:9px 15px;color:var(--text);transition:transform .12s,box-shadow .12s,background .12s;}
-  button:hover{background:var(--surface-2);}
-  button:active{transform:scale(.97);}
-  button.primary{background:var(--accent);color:#fff;border-color:var(--accent);box-shadow:0 2px 0 rgba(15,66,126,.25);}
-  button.primary:hover{background:#124e8f;transform:translateY(-1px);box-shadow:0 4px 10px rgba(22,96,174,.28);}
+  #app{background:var(--bg);color:var(--text);min-height:100vh;padding:0;font-size:14px;line-height:1.5;}
+  button{font-family:inherit;font-size:13.5px;font-weight:600;cursor:pointer;background:var(--surface);border:1px solid var(--border-strong);border-radius:var(--radius);padding:9px 16px;color:var(--text);box-shadow:var(--shadow-sm);transition:background var(--t),border-color var(--t),box-shadow var(--t),transform var(--t);}
+  button:hover{background:var(--surface-2);border-color:var(--text-3);}
+  button:active{transform:translateY(1px);}
+  button.primary{background:var(--accent);color:#fff;border-color:var(--accent);}
+  button.primary:hover{background:var(--accent-hover);border-color:var(--accent-hover);box-shadow:var(--shadow-md);}
   button.ghost{border-color:transparent;background:transparent;box-shadow:none;}
-  button.small{padding:6px 11px;font-size:12px;}
-  button:disabled{opacity:.55;cursor:default;transform:none;box-shadow:none;}
-  input,select,textarea{font-family:inherit;font-size:13px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:9px 11px;background:var(--surface);color:var(--text);width:100%;transition:border-color .12s,box-shadow .12s;}
+  button.ghost:hover{background:var(--surface-2);border-color:transparent;}
+  button.small{padding:6px 12px;font-size:12.5px;}
+  button:disabled{opacity:.5;cursor:default;transform:none;box-shadow:none;}
+  input,select,textarea{font-family:inherit;font-size:14px;border:1px solid var(--border-strong);border-radius:var(--radius);padding:10px 12px;background:var(--surface);color:var(--text);width:100%;transition:border-color var(--t),box-shadow var(--t);}
+  input::placeholder,textarea::placeholder{color:var(--text-3);}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
   textarea{resize:vertical;}
-  label.field-label{font-size:10.5px;color:var(--text-2);display:block;margin:0 0 5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
-  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px 18px;box-shadow:0 1px 2px rgba(20,26,34,.04);}
-  .badge{display:inline-block;font-size:10.5px;font-weight:700;padding:3px 9px;border-radius:5px;white-space:nowrap;letter-spacing:.01em;}
+  label.field-label{font-size:11.5px;color:var(--text-2);display:block;margin:0 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm);}
+  .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;letter-spacing:.01em;}
   .badge.ok{background:var(--ok-bg);color:var(--ok-text);}
   .badge.warn{background:var(--warn-bg);color:var(--warn-text);}
   .badge.danger{background:var(--danger-bg);color:var(--danger-text);}
   .badge.muted{background:var(--surface-2);color:var(--text-2);}
   .badge.accent{background:var(--info-bg);color:var(--info-text);}
   .badge.orange{background:#fbe6d4;color:#8a4413;}
-  .badge.team{background:var(--steel-800);color:#cdd6e0;}
-  .avatar{border-radius:7px;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;overflow:hidden;}
+  .badge.team{background:var(--steel-800);color:var(--nav-text);}
+  .avatar{border-radius:9px;background:var(--accent-bg);color:var(--accent-text);display:flex;align-items:center;justify-content:center;font-weight:800;flex-shrink:0;overflow:hidden;}
   .avatar img{width:100%;height:100%;object-fit:cover;}
   .container{max-width:780px;margin:0 auto;padding:24px 20px 60px;}
   .app-shell{display:flex;min-height:100vh;}
-  .side-nav{width:230px;flex-shrink:0;background:var(--steel-900);display:flex;flex-direction:column;padding:16px 12px;position:fixed;top:0;bottom:0;left:0;z-index:30;transform:translateX(-100%);transition:transform .2s ease;overflow-y:auto;}
+  .side-nav{width:248px;flex-shrink:0;background:var(--steel-900);display:flex;flex-direction:column;padding:14px 12px;position:fixed;top:0;bottom:0;left:0;z-index:30;transform:translateX(-100%);transition:transform .2s ease;overflow:hidden;}
   .side-nav.open{transform:translateX(0);}
   .side-nav-header{display:flex;align-items:center;gap:10px;padding:8px 8px 16px;border-bottom:1px solid rgba(255,255,255,.1);margin-bottom:10px;}
-  .side-nav-items{display:flex;flex-direction:column;gap:2px;flex:1;}
-  .side-nav-item{background:none;border:none;color:#c7d2db;display:flex;align-items:center;gap:10px;padding:10px 10px;border-radius:8px;font-size:13px;font-weight:600;text-align:left;box-shadow:none;width:100%;}
+  .side-nav-items{display:flex;flex-direction:column;gap:2px;flex:1;overflow-y:auto;min-height:0;scrollbar-width:thin;scrollbar-color:rgba(255,255,255,.2) transparent;}
+  .side-nav-items::-webkit-scrollbar{width:6px;}
+  .side-nav-items::-webkit-scrollbar-thumb{background:rgba(255,255,255,.18);border-radius:3px;}
+  .side-nav-group{margin-bottom:12px;}
+  .side-nav-group-title{font-size:10.5px;font-weight:700;text-transform:uppercase;letter-spacing:.09em;color:var(--nav-muted);margin:0 0 5px;padding:0 11px;}
+  .side-nav-item .ico{flex-shrink:0;opacity:.85;}
+  .side-nav-item.active .ico{opacity:1;}
+  .side-nav-item span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .side-nav-footer{border-top:1px solid rgba(255,255,255,.1);padding-top:8px;margin-top:6px;flex-shrink:0;}
+  .side-nav-user{display:flex;align-items:center;gap:10px;padding:10px 11px 2px;}
+  .side-nav-user-nome{font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .side-nav-user-cargo{font-size:11.5px;color:var(--nav-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .top-header-title{font-size:15px;font-weight:700;margin:0;letter-spacing:-.01em;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .icon-btn{display:inline-flex;align-items:center;justify-content:center;width:38px;height:38px;padding:0;color:var(--text-2);}
+  .icon-btn:hover{color:var(--text);}
+  .notif-dot{position:absolute;top:7px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid var(--surface);}
+  .offline-bar{background:var(--warn-bg);color:var(--warn-text);text-align:center;padding:7px;font-size:12.5px;font-weight:700;}
+  .page-container{margin:0;max-width:1320px;padding:26px 28px 72px;}
+  @media(max-width:760px){.page-container{padding:18px 16px 72px;}}
+  /* indicadores do dashboard */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:16px;}
+  @media(max-width:1000px){.kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+  .kpi{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-sm);}
+  .kpi-top{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .kpi-ico{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border-radius:var(--radius-sm);flex-shrink:0;}
+  .kpi-ico.neutro{background:var(--surface-2);color:var(--text-2);}
+  .kpi-ico.info{background:var(--info-bg);color:var(--info-text);}
+  .kpi-ico.ok{background:var(--ok-bg);color:var(--ok-text);}
+  .kpi-ico.danger{background:var(--danger-bg);color:var(--danger-text);}
+  .kpi-label{font-size:12.5px;font-weight:600;color:var(--text-2);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .kpi-valor.info{color:var(--info-text);} .kpi-valor.ok{color:var(--ok-text);} .kpi-valor.danger{color:var(--danger-text);}
+  /* duas colunas do dashboard */
+  .dash-split{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-bottom:14px;align-items:start;}
+  @media(max-width:1000px){.dash-split{grid-template-columns:1fr;}}
+  /* lista compacta de tarefas */
+  .lista-compacta{display:flex;flex-direction:column;}
+  .lista-linha{display:flex;align-items:center;gap:10px;width:100%;text-align:left;background:none;border:none;border-radius:var(--radius-sm);box-shadow:none;padding:10px 8px;border-bottom:1px solid var(--border);font-weight:400;}
+  .lista-linha:last-child{border-bottom:none;}
+  .lista-linha:hover{background:var(--surface-2);border-color:transparent;border-bottom-color:var(--border);}
+  .lista-pino{width:4px;align-self:stretch;min-height:30px;border-radius:2px;flex-shrink:0;background:var(--text-3);}
+  .lista-pino.danger{background:var(--danger);} .lista-pino.warn{background:var(--warn);}
+  .lista-pino.accent{background:var(--accent);} .lista-pino.ok{background:var(--ok);}
+  .lista-texto{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .lista-titulo{font-size:13.5px;font-weight:600;color:var(--text);line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+  .lista-meta{font-size:12px;color:var(--text-2);line-height:1.35;}
+  .lista-linha .badge{flex-shrink:0;align-self:flex-start;margin-top:2px;}
+  /* barra de progresso */
+  .barra{height:10px;border-radius:5px;background:var(--surface-2);overflow:hidden;}
+  .barra-fill{height:100%;border-radius:5px;transition:width var(--t);}
+  /* barra de controles das visualizações */
+  .barra-controles{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin:0 0 16px;}
+  .seg{display:inline-flex;background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius);padding:3px;gap:2px;}
+  .seg-btn{background:none;border:none;box-shadow:none;border-radius:var(--radius-sm);padding:7px 14px;font-size:13px;font-weight:600;color:var(--text-2);}
+  .seg-btn:hover{background:rgba(255,255,255,.7);border-color:transparent;color:var(--text);}
+  .seg-btn.active{background:var(--surface);color:var(--text);box-shadow:var(--shadow-sm);}
+  /* resumo pessoal de Minhas tarefas */
+  .resumo-pessoal{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:12px;margin-bottom:18px;}
+  .resumo-item{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px 16px;box-shadow:var(--shadow-sm);}
+  .resumo-label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2);margin-bottom:6px;}
+  /* quadro kanban */
+  .kanban-board{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:14px;align-items:start;}
+  @media(max-width:900px){
+    .kanban-board{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:10px;-webkit-overflow-scrolling:touch;}
+    .kanban-board > .kanban-col{flex:0 0 82%;scroll-snap-align:start;}
+  }
+  .kanban-col-header{display:flex;align-items:center;justify-content:space-between;padding:2px 4px 8px;}
+  .kanban-col-title{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);}
+  .kanban-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+  .kanban-col-count{background:var(--surface-3);color:var(--text-2);font-size:11.5px;font-weight:700;padding:2px 9px;border-radius:20px;}
+  .kanban-vermais{width:100%;margin-top:2px;color:var(--text-2);font-size:12.5px;}
+  /* cartão de tarefa */
+  .task-card-titulo{font-size:14px;font-weight:600;margin:0 0 4px;color:var(--text);line-height:1.35;}
+  .task-card-contexto{font-size:12.5px;color:var(--text-2);margin:0 0 10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .task-card-rodape{display:flex;align-items:center;gap:7px;flex-wrap:wrap;}
+  .task-card-prazo{font-family:var(--mono);font-size:11.5px;color:var(--text-2);}
+  .task-card-prio{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;background:var(--surface-2);color:var(--text-2);}
+  .task-card-prio.danger{background:var(--danger-bg);color:var(--danger-text);}
+  .task-card-prio.warn{background:var(--warn-bg);color:var(--warn-text);}
+  .task-card-prio.accent{background:var(--accent-bg);color:var(--accent-text);}
+  .task-card-avatar{margin-left:auto;}
+  .task-linha{display:flex;align-items:center;gap:12px;}
+  @media(max-width:600px){.task-linha{flex-wrap:wrap;}}
+  /* central de atenção */
+  .atencao-resumo{display:grid;grid-template-columns:repeat(auto-fit,minmax(78px,1fr));gap:8px;margin-bottom:16px;}
+  .atencao-num{background:var(--surface-2);border-radius:var(--radius-sm);padding:10px 8px;text-align:center;display:flex;flex-direction:column;gap:2px;}
+  .atencao-num span:last-child{font-size:11.5px;color:var(--text-2);line-height:1.3;}
+  .atencao-titulo{font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);margin:0 0 8px;}
+  .atencao-titulo.warn{color:var(--warn-text);} .atencao-titulo.info{color:var(--info-text);}
+  .atencao-marcador{width:7px;height:7px;border-radius:50%;background:var(--border-strong);flex-shrink:0;margin-top:6px;}
+  .side-nav-item{background:none;border:none;color:var(--nav-text);display:flex;align-items:center;gap:11px;padding:10px 11px;border-radius:var(--radius-sm);font-size:13.5px;font-weight:600;text-align:left;box-shadow:none;width:100%;position:relative;transition:background var(--t),color var(--t);}
   .side-nav-item:hover{background:rgba(255,255,255,.07);}
-  .side-nav-item.active{background:var(--accent);color:#fff;}
+  .side-nav-item.active{background:rgba(255,255,255,.1);color:#fff;box-shadow:inset 3px 0 0 var(--brand-gold);}
   .nav-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:25;}
   .main-area{flex:1;min-width:0;}
-  .top-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 16px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
+  .top-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:14px 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:5;}
   .hamburger-btn{display:inline-flex;}
   @media(min-width:900px){
     .side-nav{position:sticky;top:0;height:100vh;transform:none;}
@@ -110,21 +221,23 @@
   @keyframes auth-wiggle{0%,100%{transform:rotate(0deg);}50%{transform:rotate(-3deg);}}
   @keyframes auth-pop-in{0%{opacity:0;transform:scale(.93) translateY(12px);}100%{opacity:1;transform:scale(1) translateY(0);}}
   @media(min-width:900px){ .auth-hero{display:flex;} }
-  .topbar .muted-text{color:#8fa0b5;}
+  .topbar .muted-text{color:var(--nav-muted);}
   .topbar button.ghost{color:#e7ebf0;}
   .topbar button.ghost:hover{background:var(--steel-800);}
   .tabs{display:flex;gap:6px;margin:18px 0;flex-wrap:wrap;}
-  .tabs button.active{background:var(--steel-900);color:#fff;border-color:var(--steel-900);}
+  .tabs button.active{background:var(--steel-900);color:#fff;border-color:var(--steel-900);box-shadow:var(--shadow-sm);}
   .estrutura-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   @media(max-width:760px){.estrutura-grid{grid-template-columns:1fr;}}
   .estrutura-row{padding:12px;border-left:4px solid var(--brand-green);}
   .btn-wa{background:#25D366;border-color:#1da851;color:#fff;font-weight:700;}
   .btn-wa:hover{background:#1da851;border-color:#17803e;color:#fff;}
-  h1{font-size:23px;font-weight:800;margin:0;letter-spacing:-.01em;}
-  h2{font-size:17px;font-weight:800;margin:0 0 4px;}
-  h3{font-size:13.5px;font-weight:800;margin:0;text-transform:uppercase;letter-spacing:.03em;color:var(--text-2);}
-  .muted-text{color:var(--text-2);font-size:12.5px;}
-  .mono{font-family:var(--mono);font-size:11.5px;color:var(--text-3);}
+  h1{font-size:26px;font-weight:800;margin:0;letter-spacing:-.02em;line-height:1.25;}
+  h2{font-size:19px;font-weight:700;margin:0 0 4px;letter-spacing:-.01em;}
+  h3{font-size:12.5px;font-weight:700;margin:0;text-transform:uppercase;letter-spacing:.06em;color:var(--text-2);}
+  .muted-text{color:var(--text-2);font-size:13px;}
+  .mono{font-family:var(--mono);font-size:12px;color:var(--text-3);}
+  .metric{font-size:32px;font-weight:800;letter-spacing:-.02em;line-height:1.1;}
+  @media(max-width:760px){h1{font-size:22px;} .metric{font-size:28px;}}
   .grade-desktop{display:block;}
   .grade-mobile{display:none;}
   @media(max-width:760px){
@@ -148,8 +261,9 @@
   .task-card:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(20,26,34,.09);border-color:var(--border-strong);}
   .grid3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   @media(max-width:640px){.grid3{grid-template-columns:1fr;}}
-  .modal-overlay{position:fixed;inset:0;background:rgba(15,20,26,.6);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;}
-  .modal{background:var(--surface);border-radius:var(--radius-lg);max-width:520px;width:100%;padding:22px;box-shadow:0 20px 50px rgba(0,0,0,.25);}
+  .modal-overlay{position:fixed;inset:0;background:rgba(17,28,48,.55);display:flex;align-items:flex-start;justify-content:center;padding:40px 16px;overflow-y:auto;z-index:50;animation:fade-in 160ms ease-out;}
+  @keyframes fade-in{from{opacity:0;}to{opacity:1;}}
+  .modal{background:var(--surface);border-radius:var(--radius-lg);max-width:520px;width:100%;padding:24px;box-shadow:var(--shadow-lg);}
   .row{display:flex;gap:8px;align-items:center;}
   .msg{display:flex;gap:8px;align-items:flex-start;}
   .msg-bubble{flex:1;background:var(--surface-2);border-radius:10px;padding:8px 10px;}
@@ -159,7 +273,7 @@
   .notif-item{padding:10px 14px;border-bottom:1px solid var(--border);font-size:12.5px;}
   .notif-item:last-child{border-bottom:none;}
   .notif-item.unread{background:var(--accent-bg);}
-  .empty-hint{text-align:center;color:var(--text-3);font-size:12.5px;padding:30px 0;}
+  .empty-hint{text-align:center;color:var(--text-3);font-size:13px;padding:32px 0;}
   .toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--steel-900);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;z-index:100;max-width:90%;text-align:center;box-shadow:0 6px 18px rgba(0,0,0,.25);}
   .link-btn{background:none;border:none;color:var(--accent);text-decoration:underline;padding:0;font-size:12.5px;font-weight:600;}
 
@@ -712,62 +826,110 @@ function render(){
   if(STATE.screen === "chat"){ setTimeout(() => { const box = document.getElementById("chat-scroll"); if(box) box.scrollTop = box.scrollHeight; }, 0); }
 }
 
+// ---------- Ícones SVG (família única, traço 1.8, herda a cor) ----------
+const ICON_PATHS = {
+  dashboard:'<path d="M3 10.5 12 3l9 7.5"/><path d="M5 9.5V20h14V9.5"/><path d="M9.5 20v-5.5h5V20"/>',
+  tarefas:'<rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4.5h6V7H9z"/><path d="M8.5 12h7M8.5 16h4.5"/>',
+  escala:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4"/><path d="M7.5 14h3v3h-3z"/>',
+  agenda:'<rect x="3" y="5" width="18" height="16" rx="2"/><path d="M3 10h18M8 3v4M16 3v4M8 14h8M8 17.5h5"/>',
+  brainstorm:'<path d="M9 18h6"/><path d="M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9V15h7v-1.1A6 6 0 0 0 12 3Z"/>',
+  painel:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 9h4M7 13h7M7 16.5h5"/><path d="M15.5 8.5l1.5 1.5 2.5-2.5"/>',
+  reuniao:'<path d="M9 11a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M17.5 11a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5Z"/><path d="M2.5 19.5c0-3 2.9-5 6.5-5s6.5 2 6.5 5"/><path d="M17 14.6c2.6.4 4.5 2.2 4.5 4.9"/>',
+  sala:'<path d="M3 21h18"/><path d="M5 21V6l7-3 7 3v15"/><path d="M9.5 10h2M14.5 10h-2M9.5 14h2M14.5 14h-2"/>',
+  acao:'<path d="m12 3 2.6 5.6 6.1.8-4.5 4.2 1.2 6-5.4-3-5.4 3 1.2-6L3.3 9.4l6.1-.8z"/>',
+  todas:'<path d="M4 6h16M4 12h16M4 18h10"/><circle cx="19" cy="18" r="2.6"/><path d="m20.9 19.9 1.6 1.6"/>',
+  chave:'<circle cx="8" cy="12" r="4"/><path d="M12 12h9M18 12v3.5M15 12v2.5"/>',
+  estrutura:'<rect x="9" y="3" width="6" height="4.5" rx="1"/><rect x="2.5" y="16.5" width="6" height="4.5" rx="1"/><rect x="15.5" y="16.5" width="6" height="4.5" rx="1"/><path d="M12 7.5v4.5M5.5 16.5V12h13v4.5"/>',
+  equipe:'<circle cx="9" cy="8" r="3.2"/><path d="M2.8 19.5c0-3.2 2.8-5.3 6.2-5.3s6.2 2.1 6.2 5.3"/><circle cx="17.5" cy="9" r="2.4"/><path d="M17 14.3c2.4.3 4.2 2 4.2 4.4"/>',
+  mapa:'<path d="M9 4 3 6.5v13L9 17l6 2.5 6-2.5v-13L15 6.5 9 4Z"/><path d="M9 4v13M15 6.5v13"/>',
+  chat:'<path d="M20.5 12.5c0 3.9-3.8 7-8.5 7-1.1 0-2.2-.2-3.1-.5L3.5 21l1.3-4A6.6 6.6 0 0 1 3.5 12.5c0-3.9 3.8-7 8.5-7s8.5 3.1 8.5 7Z"/>',
+  kanban:'<rect x="3" y="4" width="5" height="16" rx="1.5"/><rect x="9.5" y="4" width="5" height="10.5" rx="1.5"/><rect x="16" y="4" width="5" height="13.5" rx="1.5"/>',
+  org:'<rect x="9.2" y="3" width="5.6" height="4" rx="1"/><rect x="3" y="17" width="5.6" height="4" rx="1"/><rect x="15.4" y="17" width="5.6" height="4" rx="1"/><path d="M12 7v5M5.8 17v-5h12.4v5"/>',
+  equipes:'<rect x="3" y="9" width="7" height="12" rx="1.5"/><rect x="14" y="3" width="7" height="18" rx="1.5"/><path d="M5.5 13h2M5.5 17h2M16.5 7h2M16.5 11h2M16.5 15h2"/>',
+  perfil:'<circle cx="12" cy="8.5" r="3.8"/><path d="M4.5 20.5c0-3.8 3.4-6.2 7.5-6.2s7.5 2.4 7.5 6.2"/>',
+  sair:'<path d="M15 4.5h3.5A1.5 1.5 0 0 1 20 6v12a1.5 1.5 0 0 1-1.5 1.5H15"/><path d="M10 8.5 6.5 12 10 15.5M6.5 12H15"/>',
+  busca:'<circle cx="11" cy="11" r="6.5"/><path d="m16 16 4.5 4.5"/>',
+  sino:'<path d="M18 9a6 6 0 1 0-12 0c0 5-2 6.5-2 6.5h16S18 14 18 9Z"/><path d="M13.7 19.5a2 2 0 0 1-3.4 0"/>',
+  menu:'<path d="M4 7h16M4 12h16M4 17h16"/>'
+};
+function icone(nome, tamanho){
+  const d = ICON_PATHS[nome] || ICON_PATHS.tarefas;
+  const s = tamanho || 19;
+  return `<svg class="ico" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">${d}</svg>`;
+}
+
 function renderShell(cu, activeKey, pageTitle, contentHtml){
   const hasTeam = getDirectReports(cu.id).length > 0;
   const notifs = DB.notificacoes.filter(n => n.usuario_id === cu.id);
   const unread = notifs.filter(n => !n.lida).length;
-  const navItems = [
-    { key:"dashboard", label:"Dashboard", icon:"&#127968;" },
-    { key:"minhas", label:"Minhas tarefas", icon:"&#128203;" },
-    { key:"escala", label:"Minha Escala", icon:"&#128197;" },
-    { key:"agenda", label:"Agenda", icon:"&#128198;" },
-    { key:"brainstorm", label:"Brainstorm", icon:"&#128161;" },
-    { key:"painelacoes", label:"Painel de Ações", icon:"&#128203;" },
-    { key:"reunioes", label:"Reuniões", icon:"&#128197;" },
-    { key:"salas", label:"Salas de reunião", icon:"&#127970;" },
-    ...(temAlgumPoder(cu) ? [{ key:"acoes", label:"Ações setoriais", icon:"&#128204;" }] : []),
-    ...(ehMestre(cu) ? [{ key:"admin", label:"Todas as tarefas", icon:"&#128736;" }] : []),
-    ...(ehMestre(cu) ? [{ key:"permissoes", label:"Permissões", icon:"&#128273;" }] : []),
-    ...(ehMestre(cu) ? [{ key:"estrutura", label:"Estrutura & Organograma", icon:"&#127959;" }] : []),
-    ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
-    ...(hasTeam ? [{ key:"mapa", label:"Mapa da Equipe", icon:"&#128506;" }] : []),
-    ...(getEquipesRelevantes(cu).length ? [{ key:"chat", label:"Chat da Equipe", icon:"&#128172;" }] : []),
-    { key:"kanban", label:"Kanban", icon:"&#128202;" },
-    { key:"org", label:"Organograma", icon:"&#9776;" },
-    { key:"equipes", label:"Equipes", icon:"&#127959;" },
-    { key:"perfil", label:"Perfil", icon:"&#128100;" }
-  ];
+  const grupos = [
+    { titulo:"Visão geral", itens:[
+      { key:"dashboard", label:"Dashboard", icon:"dashboard" },
+      { key:"kanban", label:"Kanban", icon:"kanban" }
+    ]},
+    { titulo:"Meu trabalho", itens:[
+      { key:"minhas", label:"Minhas tarefas", icon:"tarefas" },
+      { key:"escala", label:"Minha Escala", icon:"escala" },
+      { key:"agenda", label:"Agenda", icon:"agenda" },
+      { key:"brainstorm", label:"Brainstorm", icon:"brainstorm" }
+    ]},
+    { titulo:"Colaboração", itens:[
+      { key:"painelacoes", label:"Painel de Ações", icon:"painel" },
+      { key:"reunioes", label:"Reuniões", icon:"reuniao" },
+      { key:"salas", label:"Salas de reunião", icon:"sala" },
+      ...(getEquipesRelevantes(cu).length ? [{ key:"chat", label:"Chat da Equipe", icon:"chat" }] : [])
+    ]},
+    { titulo:"Equipe", itens:[
+      ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"equipe" }] : []),
+      ...(hasTeam ? [{ key:"mapa", label:"Mapa da Equipe", icon:"mapa" }] : []),
+      { key:"org", label:"Organograma", icon:"org" },
+      { key:"equipes", label:"Equipes", icon:"equipes" }
+    ]},
+    { titulo:"Administração", itens:[
+      ...(temAlgumPoder(cu) ? [{ key:"acoes", label:"Ações setoriais", icon:"acao" }] : []),
+      ...(ehMestre(cu) ? [{ key:"admin", label:"Todas as tarefas", icon:"todas" }] : []),
+      ...(ehMestre(cu) ? [{ key:"permissoes", label:"Permissões", icon:"chave" }] : []),
+      ...(ehMestre(cu) ? [{ key:"estrutura", label:"Estrutura & Organograma", icon:"estrutura" }] : [])
+    ]}
+  ].filter(g => g.itens.length);
+  const item = it => `<button class="side-nav-item ${activeKey===it.key?'active':''}" ${activeKey===it.key?'aria-current="page"':''} onclick="goSection('${it.key}')">${icone(it.icon)}<span>${it.label}</span></button>`;
   return `
   <div class="app-shell">
-    <div class="side-nav ${STATE.navOpen?'open':''}">
-      <div class="brand-stripe" style="margin:-16px -12px 12px;"></div>
-      <div class="side-nav-header">
-        ${avatarHtml(cu,38)}
-        <div style="min-width:0;">
-          <div style="font-weight:700;font-size:13px;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cu.nome)}</div>
-          <div style="font-size:11px;color:#9fb0be;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${esc(cu.cargo)}</div>
+    <nav class="side-nav ${STATE.navOpen?'open':''}" aria-label="Menu principal">
+      <div class="brand-stripe" style="margin:-14px -12px 14px;"></div>
+      <div class="side-nav-items">
+        ${grupos.map(g => `<div class="side-nav-group">
+          <p class="side-nav-group-title">${esc(g.titulo)}</p>
+          ${g.itens.map(item).join("")}
+        </div>`).join("")}
+      </div>
+      <div class="side-nav-footer">
+        ${item({ key:"perfil", label:"Perfil", icon:"perfil" })}
+        <button class="side-nav-item" onclick="logout()">${icone("sair")}<span>Sair</span></button>
+        <div class="side-nav-user">
+          ${avatarHtml(cu,34)}
+          <div style="min-width:0;">
+            <div class="side-nav-user-nome">${esc(cu.nome)}</div>
+            <div class="side-nav-user-cargo">${esc(cu.cargo)}</div>
+          </div>
         </div>
       </div>
-      <div class="side-nav-items">
-        ${navItems.map(it => `<button class="side-nav-item ${activeKey===it.key?'active':''}" onclick="goSection('${it.key}')"><span>${it.icon}</span>${it.label}</button>`).join("")}
-      </div>
-      <button class="side-nav-item" onclick="logout()"><span>&#8618;</span>Sair</button>
-    </div>
+    </nav>
     ${STATE.navOpen ? `<div class="nav-overlay" onclick="STATE.navOpen=false;render()"></div>` : ""}
     <div class="main-area">
-      <div class="top-header">
-        <button class="ghost hamburger-btn" onclick="STATE.navOpen=true;render()" aria-label="Abrir menu">&#9776;</button>
-        <span style="font-weight:700;font-size:14px;">${esc(pageTitle)}</span>
-        <div class="row">
-          <button class="ghost" onclick="toggleGlobalSearch()" aria-label="Buscar">&#128269;</button>
-          <button class="ghost" style="position:relative;" onclick="toggleNotif()" aria-label="Notificações">
-            &#128276;${unread ? `<span style="position:absolute;top:4px;right:4px;width:7px;height:7px;border-radius:50%;background:var(--danger);"></span>` : ""}
+      <header class="top-header">
+        <button class="ghost hamburger-btn" onclick="STATE.navOpen=true;render()" aria-label="Abrir menu">${icone("menu",20)}</button>
+        <h2 class="top-header-title">${esc(pageTitle)}</h2>
+        <div class="row" style="gap:4px;">
+          <button class="ghost icon-btn" onclick="toggleGlobalSearch()" aria-label="Buscar em tudo" title="Buscar">${icone("busca",19)}</button>
+          <button class="ghost icon-btn" style="position:relative;" onclick="toggleNotif()" aria-label="${unread ? unread + " notificações não lidas" : "Notificações"}" title="Notificações">
+            ${icone("sino",19)}${unread ? `<span class="notif-dot" aria-hidden="true"></span>` : ""}
           </button>
         </div>
-      </div>
+      </header>
       ${STATE.notifOpen ? renderNotifDrop(notifs) : ""}
-      ${STATE.offlineMode ? `<div style="background:var(--warn-bg);color:var(--warn-text);text-align:center;padding:6px;font-size:12px;font-weight:700;">&#9888; Modo offline — mostrando os últimos dados salvos. Algumas ações exigem internet.</div>` : ""}
-      <div class="container" style="margin:0;max-width:none;">${contentHtml}</div>
+      ${STATE.offlineMode ? `<div class="offline-bar">&#9888; Modo offline — mostrando os últimos dados salvos. Algumas ações exigem internet.</div>` : ""}
+      <div class="container page-container">${contentHtml}</div>
     </div>
   </div>`;
 }
@@ -806,52 +968,96 @@ function renderDashboard(cu){
   const dataFormatada = new Date().toLocaleDateString("pt-BR", { day:"numeric", month:"long", year:"numeric" });
   const diaSemana = new Date().toLocaleDateString("pt-BR", { weekday:"long" });
 
-  const statCard = (icon, color, bg, value, label) => `<div style="background:var(--surface-2);border-radius:12px;padding:14px 12px;">
-    <div style="width:30px;height:30px;border-radius:9px;background:${bg};display:flex;align-items:center;justify-content:center;font-size:15px;margin-bottom:8px;">${icon}</div>
-    <div style="font-size:22px;font-weight:800;color:${color};">${value}</div>
-    <p class="muted-text" style="margin:0;">${label}</p>
+  const kpi = (iconNome, cls, value, label) => `<div class="kpi">
+    <div class="kpi-top">
+      <span class="kpi-ico ${cls}">${icone(iconNome, 17)}</span>
+      <span class="kpi-label">${label}</span>
+    </div>
+    <div class="metric kpi-valor ${cls}">${value}</div>
   </div>`;
 
+  const prioritarias = tasks
+    .filter(t => t.status !== "concluida")
+    .map(t => ({ t, f: farolInfo(t) }))
+    .filter(x => x.f.cls === "danger" || x.f.cls === "warn")
+    .sort((a,b) => (a.f.cls === "danger" ? 0 : 1) - (b.f.cls === "danger" ? 0 : 1) || (a.t.prazo||"").localeCompare(b.t.prazo||""))
+    .slice(0, 5);
+  const proximas = tasks
+    .filter(t => t.status !== "concluida" && farolInfo(t).cls === "accent")
+    .sort((a,b) => (a.prazo||"").localeCompare(b.prazo||""))
+    .slice(0, 5);
+  const linhaTarefa = (t) => {
+    const f = farolInfo(t);
+    return `<button class="lista-linha" onclick="openTask('${t.id}')">
+      <span class="lista-pino ${f.cls}" aria-hidden="true"></span>
+      <span class="lista-texto">
+        <span class="lista-titulo">${esc(t.titulo)}</span>
+        <span class="lista-meta">${esc(temaNome(t.tema_id))} · ${esc(t.prioridade)} · prazo ${fmtDate(t.prazo)}</span>
+      </span>
+      <span class="badge ${f.cls}">${f.label}</span>
+    </button>`;
+  };
+  const totalConcluidas = perf ? perf.total : 0;
+
   const main = `
-    <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:10px;margin-bottom:4px;">
+    <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:18px;">
       <div>
-        <h1 style="margin-bottom:4px;">${saudacao}, ${esc(primeiroNome)}! &#128075;</h1>
+        <h1 style="margin-bottom:4px;">${saudacao}, ${esc(primeiroNome)}</h1>
         <p class="muted-text" style="margin:0;">${esc(dataFormatada)} · ${esc(diaSemana)}</p>
       </div>
       <button class="primary" onclick="goSection('minhas');STATE.showProposeForm=true;render()">+ Nova tarefa</button>
     </div>
-    <p class="muted-text" style="margin:8px 0 20px;">Acompanhe o progresso das suas tarefas e da sua equipe.</p>
-    <div class="grid3" style="gap:10px;margin-bottom:16px;">
-      ${statCard("&#9989;","var(--ok)","var(--ok-bg)",concluidas,"Concluída(s)")}
-      ${statCard("&#9203;","var(--info)","var(--info-bg)",andamento,"Em andamento")}
-      ${statCard("&#128203;","var(--text)","var(--surface)",afazer,"A fazer")}
-      ${statCard("&#9888;","var(--danger)","var(--danger-bg)",atrasadas,"Atrasada(s)")}
+    <div class="kpi-grid">
+      ${kpi("tarefas","neutro",afazer,"A fazer")}
+      ${kpi("escala","info",andamento,"Em andamento")}
+      ${kpi("painel","ok",concluidas,"Concluídas")}
+      ${kpi("acao","danger",atrasadas,"Atrasadas")}
     </div>
-    <div class="card" style="margin-bottom:16px;">
-      <p class="muted-text" style="margin-bottom:8px;">Minha performance</p>
-      <div class="row" style="align-items:center;gap:24px;flex-wrap:wrap;">
-        ${perf ? `<div style="flex-shrink:0;width:220px;">${gaugeSvg(perf.pct)}</div>` : `<p class="empty-hint" style="flex-shrink:0;width:220px;">Sem tarefas concluídas ainda.</p>`}
-        <div style="flex:1;min-width:240px;">
-          <p class="muted-text" style="margin:0 0 6px;">Produtividade semanal · tarefas concluídas por dia</p>
-          <div style="position:relative;height:120px;"><canvas id="weekly-chart"></canvas></div>
+    <div class="dash-split">
+      <section class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3>Precisa de atenção</h3>
+          <button class="small ghost" onclick="goSection('minhas')">Ver todas &#8250;</button>
         </div>
-      </div>
+        ${prioritarias.length
+          ? `<div class="lista-compacta">${prioritarias.map(x => linhaTarefa(x.t)).join("")}</div>`
+          : `<p class="empty-hint" style="padding:18px 0;">Nada atrasado nem perto de vencer. Bom sinal.</p>`}
+      </section>
+      <section class="card">
+        <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;">
+          <h3>Próximas entregas</h3>
+        </div>
+        ${proximas.length
+          ? `<div class="lista-compacta">${proximas.map(linhaTarefa).join("")}</div>`
+          : `<p class="empty-hint" style="padding:18px 0;">Nenhuma entrega no prazo em aberto.</p>`}
+      </section>
     </div>
-    ${renderViewSwitcher()}
-    ${renderTaskViews(applyStatusFilter(tasks))}
+    <div class="dash-split">
+      <section class="card">
+        <h3 style="margin-bottom:10px;">Cumprimento de prazo</h3>
+        ${perf ? `
+          <div class="row" style="align-items:baseline;gap:10px;margin-bottom:10px;">
+            <span class="metric" style="color:${perf.pct >= 80 ? "var(--ok)" : perf.pct >= 50 ? "var(--warn)" : "var(--danger)"};">${perf.pct}%</span>
+            <span class="muted-text">${totalConcluidas} tarefa${totalConcluidas===1?'':'s'} concluída${totalConcluidas===1?'':'s'}</span>
+          </div>
+          <div class="barra" role="img" aria-label="Cumprimento de prazo em ${perf.pct} por cento">
+            <div class="barra-fill" style="width:${perf.pct}%;background:${perf.pct >= 80 ? "var(--ok)" : perf.pct >= 50 ? "var(--warn)" : "var(--danger)"};"></div>
+          </div>
+          <p class="muted-text" style="margin:10px 0 0;">Pontos ganhos dividido pelo máximo possível das tarefas que você concluiu, pesando prioridade: entrega antes do prazo vale o dobro, no prazo vale cheio, em atraso vale metade.</p>
+        ` : `<p class="empty-hint" style="padding:18px 0;">Sem tarefas concluídas ainda — o indicador aparece depois da primeira entrega.</p>`}
+      </section>
+      <section class="card">
+        <h3 style="margin-bottom:4px;">Produtividade</h3>
+        <p class="muted-text" style="margin:0 0 10px;">Tarefas concluídas por dia · últimos 7 dias</p>
+        ${totalConcluidas
+          ? `<div style="position:relative;height:140px;"><canvas id="weekly-chart"></canvas></div>`
+          : `<p class="empty-hint" style="padding:18px 0;">Nenhuma conclusão registrada no período.</p>`}
+      </section>
+    </div>
   `;
   const side = `
     ${renderCentralAtencao(cu)}
     ${renderRankingCard(cu)}
-    <div class="card">
-      <h3 style="margin-bottom:10px;">Ações rápidas</h3>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-        <button class="small" onclick="goSection('minhas');STATE.showProposeForm=true;render()">+ Nova tarefa</button>
-        <button class="small" onclick="goSection('org')">Organograma</button>
-        <button class="small" onclick="goSection('equipes')">Equipes</button>
-        <button class="small" onclick="goSection('perfil')">Perfil</button>
-      </div>
-    </div>
   `;
   return `<div class="app-layout"><div class="container" style="margin:0;flex:1;min-width:0;max-width:none;">${main}</div><div class="sidebar-panel" style="display:block;position:static;">${side}</div></div>`;
 }
@@ -2921,7 +3127,7 @@ function renderMapaEquipeContent(cu){
 
   const side = `
     <div class="card">
-      <h3 style="margin-bottom:12px;">&#128680; Alertas de gestão</h3>
+      <h3 style="margin-bottom:12px;">Alertas de gestão</h3>
       <div style="display:flex;flex-direction:column;gap:12px;">
         ${sobrecarregados.length ? `<div><p style="font-size:11px;font-weight:800;color:var(--danger-text);text-transform:uppercase;margin-bottom:6px;">Sobrecarregado(s)</p>
           ${sobrecarregados.map(p => `<div class="row" style="gap:6px;margin-bottom:4px;">${avatarHtml(p.pessoa,20)}<span style="font-size:12.5px;">${esc(p.pessoa.nome)} · ${p.ativas} tarefas</span></div>`).join("")}
@@ -3131,10 +3337,10 @@ function renderMain(){
   const hasTeam = getDirectReports(cu.id).length > 0;
   if(STATE.tab === "equipe" && !hasTeam) STATE.tab = "minhas";
   return `
-    <div class="tabs" style="margin-top:0;">
-      <button class="${STATE.tab==='minhas'?'active':''}" onclick="setTab('minhas')">Minhas tarefas</button>
-      ${hasTeam ? `<button class="${STATE.tab==='equipe'?'active':''}" onclick="setTab('equipe')"><span style="margin-right:4px;">&#128101;</span>Minha equipe</button>` : ""}
-    </div>
+    ${hasTeam ? `<div class="seg" style="margin-bottom:18px;">
+      <button class="seg-btn ${STATE.tab==='minhas'?'active':''}" onclick="setTab('minhas')">Minhas tarefas</button>
+      <button class="seg-btn ${STATE.tab==='equipe'?'active':''}" onclick="setTab('equipe')">Minha equipe</button>
+    </div>` : ""}
     ${STATE.tab === "minhas" ? renderMinhasTarefas(cu) : renderMinhaEquipe(cu)}
   `;
 }
@@ -3341,38 +3547,48 @@ function renderCentralAtencao(cu){
   const atividades = getAtividadesRecentes(escopo);
   const atrasadasCount = escopo.filter(t => t.status !== "concluida" && farolInfo(t).cls === "danger").length;
 
-  return `<div class="card" style="margin-bottom:16px;">
-    <h3 style="margin-bottom:12px;">&#128064; Central de atenção</h3>
+  return `<section class="card" style="margin-bottom:14px;">
+    <h3 style="margin-bottom:14px;">Central de atenção</h3>
 
-    ${criticos.length ? `<p style="font-size:11px;font-weight:800;color:var(--warn-text);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">&#9888; Prazos críticos</p>
-    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
-      ${criticos.map(t => `<div class="row" style="justify-content:space-between;cursor:pointer;min-width:0;" onclick="openTask('${t.id}')">
-        <div class="row" style="gap:6px;min-width:0;flex:1;overflow:hidden;"><span style="font-size:13px;flex-shrink:0;">&#128197;</span><span style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${esc(t.titulo)}</span></div>
-        <span class="badge ${farolInfo(t).cls}" style="flex-shrink:0;">${prazoLabel(t)}</span>
-      </div>`).join("")}
-    </div>` : ""}
-
-    ${semResp.length ? `<p style="font-size:11px;font-weight:800;color:var(--info-text);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">&#128100; Sem responsável</p>
-    <div style="display:flex;flex-direction:column;gap:7px;margin-bottom:16px;">
-      ${semResp.map(t => `<div class="row" style="justify-content:space-between;cursor:pointer;min-width:0;" onclick="irParaFila()">
-        <span style="font-size:12.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1;">${esc(t.titulo)}</span><span style="color:var(--text-3);flex-shrink:0;">&#8250;</span>
-      </div>`).join("")}
-    </div>` : ""}
-
-    <p style="font-size:11px;font-weight:800;color:var(--ok-text);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;">&#128337; Atividades recentes</p>
-    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;">
-      ${atividades.length ? atividades.map(a => `<div class="row" style="align-items:flex-start;gap:8px;">
-        <span style="font-size:13px;flex-shrink:0;">${a.icone}</span>
-        <div style="min-width:0;"><div style="font-size:12.5px;">${esc(a.texto)}</div><div class="muted-text" style="font-size:11px;">${formatQuando(a.quando)}</div></div>
-      </div>`).join("") : `<p class="empty-hint" style="padding:6px 0;">Sem atividade recente.</p>`}
+    <div class="atencao-resumo">
+      <div class="atencao-num"><span class="metric" style="font-size:24px;color:var(--danger-text);">${atrasadasCount}</span><span>atrasada${atrasadasCount===1?'':'s'}</span></div>
+      <div class="atencao-num"><span class="metric" style="font-size:24px;">${criticos.length}</span><span>com prazo crítico</span></div>
+      ${hasTeam ? `<div class="atencao-num"><span class="metric" style="font-size:24px;">${semResp.length}</span><span>sem responsável</span></div>` : ""}
     </div>
 
-    <div class="row" style="gap:8px;">
-      <div style="flex:1;background:var(--surface-2);border-radius:8px;text-align:center;padding:8px 4px;"><div style="font-weight:800;">${criticos.length}</div><p class="muted-text" style="margin:0;font-size:10px;">tarefas próximas</p></div>
-      <div style="flex:1;background:var(--danger-bg);border-radius:8px;text-align:center;padding:8px 4px;"><div style="font-weight:800;color:var(--danger-text);">${atrasadasCount}</div><p class="muted-text" style="margin:0;font-size:10px;">atrasada(s)</p></div>
-      ${hasTeam ? `<div style="flex:1;background:var(--surface-2);border-radius:8px;text-align:center;padding:8px 4px;"><div style="font-weight:800;">${semResp.length}</div><p class="muted-text" style="margin:0;font-size:10px;">sem responsável</p></div>` : ""}
+    ${criticos.length ? `<p class="atencao-titulo warn">Prazos críticos</p>
+    <div class="lista-compacta" style="margin-bottom:16px;">
+      ${criticos.map(t => {
+        const f = farolInfo(t);
+        return `<button class="lista-linha" onclick="openTask('${t.id}')">
+          <span class="lista-pino ${f.cls}" aria-hidden="true"></span>
+          <span class="lista-texto">
+            <span class="lista-titulo">${esc(t.titulo)}</span>
+            <span class="lista-meta">prazo ${fmtDate(t.prazo)}</span>
+          </span>
+          <span class="badge ${f.cls}">${prazoLabel(t)}</span>
+        </button>`;
+      }).join("")}
+    </div>` : ""}
+
+    ${semResp.length ? `<p class="atencao-titulo info">Sem responsável</p>
+    <div class="lista-compacta" style="margin-bottom:16px;">
+      ${semResp.map(t => `<button class="lista-linha" onclick="irParaFila()">
+        <span class="lista-pino danger" aria-hidden="true"></span>
+        <span class="lista-texto"><span class="lista-titulo">${esc(t.titulo)}</span>
+        <span class="lista-meta">aguardando reatribuição</span></span>
+        <span class="muted-text" aria-hidden="true">&#8250;</span>
+      </button>`).join("")}
+    </div>` : ""}
+
+    <p class="atencao-titulo">Atividades recentes</p>
+    <div style="display:flex;flex-direction:column;gap:10px;">
+      ${atividades.length ? atividades.slice(0,4).map(a => `<div class="row" style="align-items:flex-start;gap:9px;">
+        <span class="atencao-marcador" aria-hidden="true"></span>
+        <div style="min-width:0;"><div style="font-size:12.5px;line-height:1.4;">${esc(a.texto)}</div><div class="muted-text" style="font-size:11.5px;">${formatQuando(a.quando)}</div></div>
+      </div>`).join("") : `<p class="empty-hint" style="padding:8px 0;">Sem atividade recente.</p>`}
     </div>
-  </div>`;
+  </section>`;
 }
 function getEquipesRelevantes(cu){
   const ids = new Set();
@@ -3394,7 +3610,7 @@ function renderRankingCardFor(cu, equipeId){
   const mesNome = new Date().toLocaleDateString("pt-BR", { month:"long", year:"numeric" });
   const nomeEquipe = equipeNome(equipeId) || "Equipe";
   return `<div class="card" style="margin-bottom:16px;">
-    <p class="muted-text" style="margin-bottom:8px;">&#127942; Ranking · ${esc(nomeEquipe)} · ${esc(mesNome)}</p>
+    <h3 style="margin-bottom:10px;">Ranking · ${esc(nomeEquipe)} · ${esc(mesNome)}</h3>
     ${ranked.map((r,i) => `<div class="row" style="justify-content:space-between;padding:5px 6px;border-radius:6px;${r.u.id===cu.id?'background:var(--accent-bg);':''}">
       <div class="row" style="gap:8px;"><span style="width:22px;text-align:center;font-size:15px;">${posicaoRanking(i)}</span>${avatarHtml(r.u,24)}<span style="font-size:13px;font-weight:${r.u.id===cu.id?'800':'600'};">${esc(r.u.nome)}</span></div>
       <span class="badge accent">${r.pontos} pts</span>
@@ -3411,24 +3627,38 @@ function renderMinhasTarefas(cu){
   tasks = applyStatusFilter(tasks);
   const perf = computePerformance(cu.id);
   const minhasFerias = DB.ferias.filter(f => f.usuario_id === cu.id && f.data_fim >= todayISO()).sort((a,b)=>a.data_inicio.localeCompare(b.data_inicio));
+  const todas = tasksFor(cu.id).filter(t => t.status !== "recusada" && t.status !== "pendente_aprovacao");
+  const nAtrasadas = todas.filter(t => t.status !== "concluida" && farolInfo(t).cls === "danger").length;
+  const nAbertas = todas.filter(t => ["a_fazer","em_andamento","impedida"].includes(t.status)).length;
+  const corPerf = !perf ? "var(--text-2)" : (perf.pct >= 80 ? "var(--ok)" : perf.pct >= 50 ? "var(--warn)" : "var(--danger)");
   return `
-    ${perf ? `<div class="card" style="margin-bottom:16px;">
-      <p class="muted-text" style="text-align:center;">Minha performance</p>
-      ${gaugeSvg(perf.pct)}
-      <p class="muted-text" style="text-align:center;margin-top:-8px;">Eficiência de prazo · meta 90% · ${perf.total} tarefa(s) concluída(s)</p>
-    </div>` : ""}
-    ${minhasFerias.length ? `<div class="card" style="margin-bottom:16px;">
-      <p class="muted-text" style="margin-bottom:6px;">&#127796; Minhas férias</p>
-      ${minhasFerias.map(f => { const st = feriasStatus(f); return `<div class="row" style="justify-content:space-between;">
-        <span class="mono">${fmtDate(f.data_inicio)} — ${fmtDate(f.data_fim)}</span><span class="badge ${st.cls}">${st.label}</span>
-      </div>`; }).join("")}
-    </div>` : ""}
-    <div class="ranking-inline">${renderRankingCard(cu)}</div>
-    <div style="margin-bottom:16px;">
-      ${STATE.showProposeForm ? renderProposeForm(cu) : `<button onclick="STATE.showProposeForm=true;render()"><span style="margin-right:4px;">+</span>Nova tarefa</button>`}
+    <div class="row" style="justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:12px;margin-bottom:16px;">
+      <div>
+        <h1 style="margin-bottom:4px;">Minhas tarefas</h1>
+        <p class="muted-text" style="margin:0;">${nAbertas} em aberto${nAtrasadas ? ` · <strong style="color:var(--danger-text);">${nAtrasadas} atrasada${nAtrasadas===1?'':'s'}</strong>` : ""}</p>
+      </div>
+      <button class="primary" onclick="STATE.showProposeForm=true;render()">+ Nova tarefa</button>
     </div>
+    <div class="resumo-pessoal">
+      <div class="resumo-item">
+        <span class="resumo-label">Cumprimento de prazo</span>
+        <div class="row" style="gap:8px;align-items:baseline;">
+          <span style="font-size:22px;font-weight:800;color:${corPerf};">${perf ? perf.pct + "%" : "—"}</span>
+          <span class="muted-text">${perf ? perf.total + " concluída(s)" : "sem conclusões ainda"}</span>
+        </div>
+        ${perf ? `<div class="barra" style="margin-top:7px;"><div class="barra-fill" style="width:${perf.pct}%;background:${corPerf};"></div></div>` : ""}
+      </div>
+      ${minhasFerias.length ? `<div class="resumo-item">
+        <span class="resumo-label">Minhas férias</span>
+        ${minhasFerias.map(f => { const st = feriasStatus(f); return `<div class="row" style="justify-content:space-between;gap:8px;margin-top:4px;">
+          <span class="mono">${fmtDate(f.data_inicio)} — ${fmtDate(f.data_fim)}</span><span class="badge ${st.cls}">${st.label}</span>
+        </div>`; }).join("")}
+      </div>` : ""}
+    </div>
+    ${STATE.showProposeForm ? `<div style="margin-bottom:16px;">${renderProposeForm(cu)}</div>` : ""}
     ${renderViewSwitcher()}
-    ${renderTaskViews(tasks, true)}`;
+    ${renderTaskViews(tasks, true)}
+    <div class="ranking-inline" style="margin-top:18px;">${renderRankingCard(cu)}</div>`;
 }
 function renderProposeForm(cu){
   return `<div class="card">
@@ -3582,7 +3812,7 @@ function renderControleClt(cu){
   itens.sort((a,b) => ordem[a.ciclo.status.cls] - ordem[b.ciclo.status.cls]);
   const corBarra = { danger:"var(--danger)", warn:"var(--warn)", orange:"#d2691e", ok:"var(--ok)" };
   return `<div class="card" style="margin-bottom:16px;background:linear-gradient(160deg,var(--steel-900),var(--steel-800));border:none;">
-    <h3 style="color:#fff;opacity:.85;margin-bottom:12px;">&#9200; Controle de férias · CLT</h3>
+    <h3 style="color:#fff;opacity:.85;margin-bottom:12px;">Controle de férias · CLT</h3>
     ${itens.length ? `<div style="display:flex;flex-direction:column;gap:10px;">
       ${itens.map(({u,ciclo}) => {
         const idade = calcularIdade(u.data_nascimento);
@@ -3593,23 +3823,23 @@ function renderControleClt(cu){
           <div class="row" style="justify-content:space-between;margin-bottom:7px;">
             <div class="row">${avatarHtml(u,26)}<div>
               <div style="font-weight:700;font-size:13px;color:#fff;">${esc(u.nome)}</div>
-              <div style="font-size:11.5px;color:#9fb0be;">${idade!==null ? idade+' anos · ' : ''}admitido em ${fmtDate(u.data_admissao)}</div>
+              <div style="font-size:11.5px;color:var(--nav-muted);">${idade!==null ? idade+' anos · ' : ''}admitido em ${fmtDate(u.data_admissao)}</div>
             </div></div>
             <span class="badge ${ciclo.status.cls}">${ciclo.status.label}</span>
           </div>
           <div style="height:7px;background:rgba(255,255,255,.12);border-radius:5px;overflow:hidden;margin-bottom:5px;">
             <div style="height:100%;width:${pct}%;background:${corBarra[ciclo.status.cls]};"></div>
           </div>
-          <p class="mono" style="margin:0 0 8px;color:#9fb0be;">${ciclo.diasAteLimite >= 0 ? ciclo.diasAteLimite+' dias até o limite legal (24 meses)' : 'PRAZO ESTOURADO há ' + Math.abs(ciclo.diasAteLimite) + ' dias'}</p>
+          <p class="mono" style="margin:0 0 8px;color:var(--nav-muted);">${ciclo.diasAteLimite >= 0 ? ciclo.diasAteLimite+' dias até o limite legal (24 meses)' : 'PRAZO ESTOURADO há ' + Math.abs(ciclo.diasAteLimite) + ' dias'}</p>
           <div class="row" style="gap:6px;flex-wrap:wrap;">
-            <label style="font-size:10.5px;color:#9fb0be;font-weight:700;text-transform:uppercase;letter-spacing:.04em;align-self:center;">Retorno de férias:</label>
+            <label style="font-size:10.5px;color:var(--nav-muted);font-weight:700;text-transform:uppercase;letter-spacing:.04em;align-self:center;">Retorno de férias:</label>
             <input type="date" value="${u.ultimo_retorno_ferias||''}" onchange="atualizarRetornoFerias('${u.id}', this.value)" style="width:auto;padding:5px 8px;font-size:12px;" />
             ${ciclo.sugestaoRetorno ? `<button class="small" onclick="atualizarRetornoFerias('${u.id}', '${ciclo.sugestaoRetorno}')">Usar ${fmtDate(ciclo.sugestaoRetorno)} (última férias registrada)</button>` : ""}
           </div>
         </div>`;
       }).join("")}
-    </div>` : `<p style="color:#9fb0be;font-size:12.5px;margin:0;">Ninguém com data de admissão cadastrada ainda.</p>`}
-    ${semData.length ? `<p style="color:#9fb0be;font-size:11.5px;margin:10px 0 0;">${semData.length} pessoa(s) sem data de admissão — cadastre em "Gerenciar equipe" pra entrar no controle.</p>` : ""}
+    </div>` : `<p style="color:var(--nav-muted);font-size:12.5px;margin:0;">Ninguém com data de admissão cadastrada ainda.</p>`}
+    ${semData.length ? `<p style="color:var(--nav-muted);font-size:11.5px;margin:10px 0 0;">${semData.length} pessoa(s) sem data de admissão — cadastre em "Gerenciar equipe" pra entrar no controle.</p>` : ""}
   </div>`;
 }
 function renderFerias(cu){
@@ -3953,15 +4183,17 @@ function renderStatusFilterPanel(){
 function renderViewSwitcher(){
   const n = STATE.filterStatusMulti.length;
   const label = n ? `${n} status selecionado${n>1?'s':''}` : "Todos os status";
-  return `<div class="row" style="justify-content:space-between;flex-wrap:wrap;gap:8px;margin:0 0 14px;">
-    <div class="tabs" style="margin:0;">
-      <button class="small ${STATE.view==='kanban'?'active':''}" onclick="setView('kanban')">Kanban</button>
-      <button class="small ${STATE.view==='lista'?'active':''}" onclick="setView('lista')">Lista</button>
-      <button class="small ${STATE.view==='prioridade'?'active':''}" onclick="setView('prioridade')">Quadro de prioridades</button>
+  return `<div class="barra-controles">
+    <div class="seg" role="tablist" aria-label="Visualização">
+      <button class="seg-btn ${STATE.view==='kanban'?'active':''}" role="tab" aria-selected="${STATE.view==='kanban'}" onclick="setView('kanban')">Kanban</button>
+      <button class="seg-btn ${STATE.view==='lista'?'active':''}" role="tab" aria-selected="${STATE.view==='lista'}" onclick="setView('lista')">Lista</button>
+      <button class="seg-btn ${STATE.view==='prioridade'?'active':''}" role="tab" aria-selected="${STATE.view==='prioridade'}" onclick="setView('prioridade')">Prioridades</button>
     </div>
-    <div style="position:relative;">
-      <button class="small" onclick="STATE.statusFilterOpen=!STATE.statusFilterOpen;render()">${esc(label)} &#9662;</button>
-      ${STATE.statusFilterOpen ? renderStatusFilterPanel() : ""}
+    <div class="row" style="gap:8px;flex-wrap:wrap;">
+      <div style="position:relative;">
+        <button class="small ${n?'primary':''}" aria-expanded="${!!STATE.statusFilterOpen}" onclick="STATE.statusFilterOpen=!STATE.statusFilterOpen;render()">${esc(label)} &#9662;</button>
+        ${STATE.statusFilterOpen ? renderStatusFilterPanel() : ""}
+      </div>
     </div>
   </div>`;
 }
@@ -3978,27 +4210,30 @@ function taskCardHtml(t, showAssignee){
   const canDragStatus = isOwner && ["a_fazer","em_andamento","concluida"].includes(t.status);
   const canDragPriority = isOwner || isAncestor;
   const canDrag = canDragStatus || canDragPriority;
-  return `<div class="task-card" style="--strip:${farolStripColor(t)};" ${canDrag?`draggable="true" ondragstart="onDragStartTask(event,'${t.id}')" ondragend="onDragEndTask(event)"`:""} onclick="openTask('${t.id}')">
-    <p style="font-size:13.5px;font-weight:700;margin:0 0 7px;">${esc(t.titulo)}</p>
-    <div class="row" style="justify-content:space-between;margin-bottom:7px;">
-      <div class="row" style="gap:5px;">
-        <span title="Prioridade ${esc(t.prioridade)}">${prioridadeIcon(t.prioridade)}</span>
-        <span class="badge muted">${esc(temaNome(t.tema_id))}</span>
-      </div>
-      ${showAssignee && assignee ? avatarHtml(assignee,22) : ""}
-    </div>${badgeHtml(t)}${(() => { const si = setorInfo(t.setor_acao); return si ? ` <span class="badge" style="background:${si.cor};color:#fff;">${si.icon} ${esc(si.nome)}</span>` : ""; })()}
+  const si = setorInfo(t.setor_acao);
+  const f = farolInfo(t);
+  return `<div class="task-card" style="--strip:${farolStripColor(t)};" ${canDrag?`draggable="true" ondragstart="onDragStartTask(event,'${t.id}')" ondragend="onDragEndTask(event)"`:""} onclick="openTask('${t.id}')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTask('${t.id}');}">
+    <p class="task-card-titulo">${esc(t.titulo)}</p>
+    <p class="task-card-contexto">${si ? esc(si.nome) : esc(temaNome(t.tema_id))}</p>
+    <div class="task-card-rodape">
+      <span class="badge ${f.cls}">${f.label}</span>
+      <span class="task-card-prazo">${fmtDate(t.prazo)}</span>
+      <span class="task-card-prio ${PRIORIDADE_CLS[t.prioridade] || "muted"}">${esc(t.prioridade)}</span>
+      ${showAssignee && assignee ? `<span class="task-card-avatar" title="${esc(assignee.nome)}">${avatarHtml(assignee,24)}</span>` : ""}
+    </div>
   </div>`;
 }
 const STATUS_STYLE = {
-  a_fazer:   { icon:"&#128203;", grad:"linear-gradient(135deg,#f0b400,#c68e00)" },
-  em_andamento: { icon:"&#128295;", grad:"linear-gradient(135deg,#1660ae,#0f4a86)" },
-  concluida: { icon:"&#9989;",  grad:"linear-gradient(135deg,#1c8a4b,#146639)" }
+  a_fazer:      { cor:"var(--text-3)" },
+  em_andamento: { cor:"var(--accent)" },
+  concluida:    { cor:"var(--ok)" }
 };
 const PRIORIDADE_STYLE = {
-  Alta:  { icon:"&#128293;", grad:"linear-gradient(135deg,#c0392b,#8b271b)" },
-  Média: { icon:"&#9889;",  grad:"linear-gradient(135deg,#f0b400,#c68e00)" },
-  Baixa: { icon:"&#127793;", grad:"linear-gradient(135deg,#1660ae,#0f4a86)" }
+  Alta:  { cor:"var(--danger)" },
+  Média: { cor:"var(--warn)" },
+  Baixa: { cor:"var(--accent)" }
 };
+const PRIORIDADE_CLS = { Alta:"danger", Média:"warn", Baixa:"accent" };
 let draggedTaskId = null;
 function onDragStartTask(event, taskId){
   draggedTaskId = taskId;
@@ -4039,44 +4274,61 @@ async function onDropPriority(event, novaPrioridade){
   if(error){ t.prioridade = prioridadeAnterior; toast("Erro ao mover: " + error.message); render(); }
   else{ lastManualLoadAt = Date.now(); loadAll(); }
 }
-function kanbanColHtml(title, count, bodyHtml, style, dropCall){
-  const headerBg = style ? `background:${style.grad};` : "";
-  const titleColor = style ? "color:#fff;" : "";
-  const countStyle = style ? "background:rgba(255,255,255,.28);color:#fff;" : "";
+function kanbanColHtml(title, count, bodyHtml, style, dropCall, rodapeHtml){
   const dropAttrs = dropCall
     ? `ondragover="event.preventDefault();this.classList.add('kanban-col-dragover');" ondragleave="this.classList.remove('kanban-col-dragover');" ondrop="${dropCall}"`
     : "";
+  const cor = style && style.cor ? style.cor : "var(--text-3)";
   return `<div class="kanban-col" ${dropAttrs}>
-    <div class="kanban-col-header" style="${headerBg}border-radius:9px;padding:8px 10px;margin-bottom:2px;">
-      <span class="kanban-col-title" style="${titleColor}">${style?style.icon+" ":""}${title}</span>
-      <span class="kanban-col-count" style="${countStyle}">${count}</span>
+    <div class="kanban-col-header">
+      <span class="kanban-col-title"><span class="kanban-dot" style="background:${cor};"></span>${title}</span>
+      <span class="kanban-col-count">${count}</span>
     </div>
-    ${bodyHtml || `<p class="empty-hint" style="padding:16px 0;">&#127754; Nada por aqui</p>`}
+    ${bodyHtml || `<p class="empty-hint" style="padding:18px 0;">Nada por aqui</p>`}
+    ${rodapeHtml || ""}
   </div>`;
 }
+const CONCLUIDAS_PAGINA = 8;
+function verMaisConcluidas(){
+  STATE.concluidasVisiveis = (STATE.concluidasVisiveis || CONCLUIDAS_PAGINA) + CONCLUIDAS_PAGINA;
+  render();
+}
 function renderTaskViews(tasks){
-  if(!tasks.length) return `<p class="empty-hint">&#127775; Tudo limpo por aqui — nenhuma tarefa nesse filtro.</p>`;
+  if(!tasks.length) return `<p class="empty-hint">Tudo limpo por aqui — nenhuma tarefa nesse filtro.</p>`;
   if(STATE.view === "kanban"){
     const cols = { a_fazer: [], em_andamento: [], concluida: [] };
     tasks.forEach(t => { if(cols[t.status]) cols[t.status].push(t); });
-    return `<div class="grid3">${["a_fazer","em_andamento","concluida"].map(s =>
-      kanbanColHtml(statusLabel(s), (cols[s]||[]).length, (cols[s]||[]).map(t=>taskCardHtml(t, true)).join(""), STATUS_STYLE[s], `onDropTask(event,'${s}')`)
-    ).join("")}</div>`;
+    // Concluídas: mais recentes primeiro, com "carregar mais" para não dominar a tela
+    cols.concluida.sort((a,b) => String(b.concluido_em||"").localeCompare(String(a.concluido_em||"")));
+    const limite = STATE.concluidasVisiveis || CONCLUIDAS_PAGINA;
+    return `<div class="kanban-board">${["a_fazer","em_andamento","concluida"].map(s => {
+      const lista = cols[s] || [];
+      const total = lista.length;
+      const mostrar = s === "concluida" ? lista.slice(0, limite) : lista;
+      const restam = total - mostrar.length;
+      const rodape = restam > 0
+        ? `<button class="small ghost kanban-vermais" onclick="event.stopPropagation();verMaisConcluidas()">Carregar mais ${Math.min(restam, CONCLUIDAS_PAGINA)} de ${restam} restante${restam===1?'':'s'}</button>`
+        : "";
+      return kanbanColHtml(statusLabel(s), total, mostrar.map(t=>taskCardHtml(t, true)).join(""), STATUS_STYLE[s], `onDropTask(event,'${s}')`, rodape);
+    }).join("")}</div>`;
   }
   if(STATE.view === "lista"){
     return `<div style="display:flex;flex-direction:column;gap:8px;">${tasks.map(t => {
       const a = getUser(t.atribuido_a);
-      return `<div class="task-card row" style="justify-content:space-between;--strip:${farolStripColor(t)};" onclick="openTask('${t.id}')">
-        <div class="row">${avatarHtml(a,26)}<div>
-          <div class="row" style="gap:5px;"><span title="Prioridade ${esc(t.prioridade)}">${prioridadeIcon(t.prioridade)}</span><span style="font-size:13.5px;font-weight:700;">${esc(t.titulo)}</span></div>
-          <div class="muted-text">${esc(temaNome(t.tema_id))} · <span class="mono">${fmtDate(t.prazo)}</span></div>
-        </div></div>
+      const si = setorInfo(t.setor_acao);
+      return `<div class="task-card task-linha" style="--strip:${farolStripColor(t)};" onclick="openTask('${t.id}')" tabindex="0" role="button" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openTask('${t.id}');}">
+        ${a ? avatarHtml(a,30) : ""}
+        <div style="flex:1;min-width:0;">
+          <div class="task-card-titulo" style="margin-bottom:3px;">${esc(t.titulo)}</div>
+          <div class="muted-text" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${si ? esc(si.nome) : esc(temaNome(t.tema_id))} · prazo ${fmtDate(t.prazo)}</div>
+        </div>
+        <span class="task-card-prio ${PRIORIDADE_CLS[t.prioridade] || "muted"}">${esc(t.prioridade)}</span>
         ${badgeHtml(t)}</div>`;
     }).join("")}</div>`;
   }
   const cols = { Alta: [], Média: [], Baixa: [] };
   tasks.forEach(t => { (cols[t.prioridade] = cols[t.prioridade] || []).push(t); });
-  return `<div class="grid3">${["Alta","Média","Baixa"].map(p =>
+  return `<div class="kanban-board">${["Alta","Média","Baixa"].map(p =>
     kanbanColHtml(p, (cols[p]||[]).length, (cols[p]||[]).map(t=>taskCardHtml(t, true)).join(""), PRIORIDADE_STYLE[p], `onDropPriority(event,'${p}')`)
   ).join("")}</div>`;
 }
