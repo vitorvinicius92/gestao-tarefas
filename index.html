@@ -115,6 +115,9 @@
   .topbar button.ghost:hover{background:var(--steel-800);}
   .tabs{display:flex;gap:6px;margin:18px 0;flex-wrap:wrap;}
   .tabs button.active{background:var(--steel-900);color:#fff;border-color:var(--steel-900);}
+  .estrutura-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
+  @media(max-width:760px){.estrutura-grid{grid-template-columns:1fr;}}
+  .estrutura-row{padding:12px;border-left:4px solid var(--brand-green);}
   h1{font-size:23px;font-weight:800;margin:0;letter-spacing:-.01em;}
   h2{font-size:17px;font-weight:800;margin:0 0 4px;}
   h3{font-size:13.5px;font-weight:800;margin:0;text-transform:uppercase;letter-spacing:.03em;color:var(--text-2);}
@@ -508,6 +511,7 @@ function render(){
   else if(STATE.screen === "salas") app.innerHTML = cu ? renderShell(cu, "salas", "Salas de reunião", renderSalasContent(cu)) : renderMenu();
   else if(STATE.screen === "salaspublico") app.innerHTML = renderSalasPublico();
   else if(STATE.screen === "permissoes") app.innerHTML = cu ? renderShell(cu, "permissoes", "Permissões", renderPermissoesContent(cu)) : renderMenu();
+  else if(STATE.screen === "estrutura") app.innerHTML = cu ? renderShell(cu, "estrutura", "Estrutura & Organograma", renderEstruturaContent(cu)) : renderMenu();
   else if(STATE.screen === "chat") app.innerHTML = cu ? renderShell(cu, "chat", "Chat da Equipe", renderChatContent(cu)) : renderMenu();
 
   if(STATE.openTaskId){ document.body.insertAdjacentHTML("beforeend", renderTaskModal()); }
@@ -533,6 +537,7 @@ function renderShell(cu, activeKey, pageTitle, contentHtml){
     ...(temAlgumPoder(cu) ? [{ key:"acoes", label:"Ações setoriais", icon:"&#128204;" }] : []),
     ...(ehMestre(cu) ? [{ key:"admin", label:"Todas as tarefas", icon:"&#128736;" }] : []),
     ...(ehMestre(cu) ? [{ key:"permissoes", label:"Permissões", icon:"&#128273;" }] : []),
+    ...(ehMestre(cu) ? [{ key:"estrutura", label:"Estrutura & Organograma", icon:"&#127959;" }] : []),
     ...(hasTeam ? [{ key:"equipe", label:"Minha equipe", icon:"&#128101;" }] : []),
     ...(hasTeam ? [{ key:"mapa", label:"Mapa da Equipe", icon:"&#128506;" }] : []),
     ...(getEquipesRelevantes(cu).length ? [{ key:"chat", label:"Chat da Equipe", icon:"&#128172;" }] : []),
@@ -593,6 +598,7 @@ function goSection(key){
   else if(key === "salas") go("salas");
   else if(key === "admin") go("admin");
   else if(key === "permissoes") go("permissoes");
+  else if(key === "estrutura") go("estrutura");
   else if(key === "chat") go("chat");
   else if(key === "perfil") go("perfil");
 }
@@ -1999,6 +2005,239 @@ async function togglePoder(usuarioId, setorId){
   if(error){ toast("Erro ao salvar permissão: " + error.message); render(); return; }
   u.poderes = novos;
   toast(`Permissões de ${u.nome.split(" ")[0]} atualizadas.`);
+  render();
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+
+// ---------- Estrutura e organograma (somente mestre) ----------
+function renderEstruturaContent(cu){
+  if(!ehMestre(cu)) return `<p class="empty-hint">Somente o usuário mestre pode editar a estrutura da empresa.</p>`;
+  if(!STATE.estruturaTab) STATE.estruturaTab = "hierarquia";
+  const t = STATE.estruturaTab;
+  return `<h1 style="margin-bottom:4px;">Estrutura &amp; Organograma</h1>
+  <p class="muted-text" style="margin-bottom:16px;">Defina quem é liderado de quem, mova pessoas entre equipes e ajuste as equipes e especialidades cadastradas. O organograma é atualizado na hora.</p>
+  <div class="tabs" style="margin-top:0;">
+    <button class="small ${t==='hierarquia'?'active':''}" onclick="STATE.estruturaTab='hierarquia';render()">&#128101; Hierarquia</button>
+    <button class="small ${t==='equipes'?'active':''}" onclick="STATE.estruturaTab='equipes';render()">&#127959; Equipes &amp; especialidades</button>
+    <button class="small ${t==='preview'?'active':''}" onclick="STATE.estruturaTab='preview';render()">&#9776; Organograma</button>
+  </div>
+  ${t === "equipes" ? renderEstruturaEquipes() : t === "preview" ? renderEstruturaPreview() : renderEstruturaHierarquia()}`;
+}
+
+function filtrarEstrutura(){
+  const campo = document.getElementById("estrutura-busca");
+  const q = (campo ? campo.value : "").toLowerCase().trim();
+  const linhas = document.querySelectorAll("[data-estrutura-row]");
+  for(let i = 0; i < linhas.length; i++){
+    const txt = (linhas[i].getAttribute("data-estrutura-row") || "").toLowerCase();
+    linhas[i].style.display = (!q || txt.indexOf(q) !== -1) ? "" : "none";
+  }
+}
+
+function renderEstruturaHierarquia(){
+  const pessoas = DB.usuarios.filter(u => u.ativo !== false).sort((a,b) => a.nome.localeCompare(b.nome));
+  const semLider = pessoas.filter(p => !p.lider_id).length;
+  return `
+  <div class="card" style="margin-bottom:14px;background:var(--info-bg);border-color:#c9dcea;">
+    <p style="font-size:12.5px;margin:0;">Cada alteração é salva na hora. O app não deixa criar laços: ninguém pode virar liderado de quem está abaixo dele.
+    ${semLider ? ` Hoje há <strong>${semLider}</strong> pessoa${semLider===1?'':'s'} no topo da hierarquia.` : ""}</p>
+  </div>
+  <div class="card" style="margin-bottom:14px;padding:10px;">
+    <input id="estrutura-busca" placeholder="Buscar por nome, cargo, equipe ou líder…" oninput="filtrarEstrutura()" />
+  </div>
+  <div style="display:flex;flex-direction:column;gap:10px;">
+    ${pessoas.map(p => {
+      const proibidos = new Set(getSubtreeIds(p.id));
+      const opcoes = DB.usuarios.filter(u => u.ativo !== false && !proibidos.has(u.id)).sort((a,b) => a.nome.localeCompare(b.nome));
+      const liderAtual = p.lider_id ? getUser(p.lider_id) : null;
+      if(liderAtual && !opcoes.some(o => o.id === liderAtual.id)) opcoes.unshift(liderAtual);
+      const nLiderados = getDirectReports(p.id).length;
+      const busca = [p.nome, p.cargo, equipeNome(p.equipe_id) || "", especialidadeNome(p.especialidade_id) || "", liderAtual ? liderAtual.nome : "sem lider"].join(" ");
+      return `<div class="card estrutura-row" data-estrutura-row="${esc(busca)}">
+        <div class="row" style="gap:10px;align-items:center;margin-bottom:10px;">
+          ${avatarHtml(p,34)}
+          <div style="flex:1;min-width:0;">
+            <div style="font-weight:800;font-size:13.5px;">${esc(p.nome)}${p.is_mestre?' <span class="badge accent">mestre</span>':''}</div>
+            <div class="muted-text">${esc(p.cargo)}</div>
+          </div>
+          ${nLiderados ? `<span class="badge team">${nLiderados} liderado${nLiderados===1?'':'s'}</span>` : ""}
+        </div>
+        <div class="estrutura-grid">
+          <div>
+            <label class="field-label">Líder direto</label>
+            <select id="est-lider-${p.id}" onchange="salvarEstruturaPessoa('${p.id}')">
+              <option value="" ${!p.lider_id?'selected':''}>Topo da hierarquia (sem líder)</option>
+              ${opcoes.map(o => `<option value="${o.id}" ${p.lider_id===o.id?'selected':''}>${esc(o.nome)} — ${esc(o.cargo)}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Equipe</label>
+            <select id="est-equipe-${p.id}" onchange="salvarEstruturaPessoa('${p.id}')">
+              <option value="" ${!p.equipe_id?'selected':''}>Sem equipe definida</option>
+              ${DB.equipes.map(e => `<option value="${e.id}" ${p.equipe_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join("")}
+            </select>
+          </div>
+          <div>
+            <label class="field-label">Especialidade</label>
+            <select id="est-esp-${p.id}" onchange="salvarEstruturaPessoa('${p.id}')">
+              <option value="" ${!p.especialidade_id?'selected':''}>Sem especialidade</option>
+              ${DB.especialidades.map(e => `<option value="${e.id}" ${p.especialidade_id===e.id?'selected':''}>${esc(e.nome)}</option>`).join("")}
+            </select>
+          </div>
+        </div>
+      </div>`;
+    }).join("") || `<p class="empty-hint">Nenhuma pessoa cadastrada.</p>`}
+  </div>`;
+}
+
+async function salvarEstruturaPessoa(id){
+  const p = getUser(id);
+  if(!p) return;
+  const selLider = document.getElementById("est-lider-" + id);
+  const selEquipe = document.getElementById("est-equipe-" + id);
+  const selEsp = document.getElementById("est-esp-" + id);
+  if(!selLider || !selEquipe || !selEsp) return;
+  const lider = selLider.value || null;
+  const equipe = selEquipe.value || null;
+  const esp = selEsp.value || null;
+  if(lider && getSubtreeIds(id).indexOf(lider) !== -1){
+    toast("Não dá: isso criaria um laço na hierarquia.");
+    render();
+    return;
+  }
+  const antes = { lider_id: p.lider_id, equipe_id: p.equipe_id, especialidade_id: p.especialidade_id };
+  p.lider_id = lider; p.equipe_id = equipe; p.especialidade_id = esp;
+  render();
+  const { error } = await sb.from("usuarios")
+    .update({ lider_id: lider, equipe_id: equipe, especialidade_id: esp })
+    .eq("id", id);
+  if(error){
+    p.lider_id = antes.lider_id; p.equipe_id = antes.equipe_id; p.especialidade_id = antes.especialidade_id;
+    toast("Erro ao salvar: " + error.message);
+    render();
+    return;
+  }
+  toast(`${p.nome.split(" ")[0]} atualizado.`);
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+
+function renderEstruturaEquipes(){
+  const linhaEquipe = (e) => {
+    const membros = DB.usuarios.filter(u => u.equipe_id === e.id && u.ativo !== false).length;
+    return `<div class="row" style="gap:8px;align-items:center;">
+      <input id="eq-nome-${e.id}" value="${esc(e.nome)}" style="flex:1;min-width:0;" />
+      <span class="badge team">${membros}</span>
+      <button class="small" onclick="renomearEquipe('${e.id}')">Salvar</button>
+      <button class="small ghost" title="${membros ? 'Mova as pessoas antes de remover' : 'Remover equipe'}" ${membros ? 'disabled' : ''} onclick="removerEquipe('${e.id}')"><span style="color:${membros?'var(--text-3)':'var(--danger)'};">&#128465;</span></button>
+    </div>`;
+  };
+  const linhaEsp = (e) => {
+    const membros = DB.usuarios.filter(u => u.especialidade_id === e.id && u.ativo !== false).length;
+    return `<div class="row" style="gap:8px;align-items:center;">
+      <input id="esp-nome-${e.id}" value="${esc(e.nome)}" style="flex:1;min-width:0;" />
+      <span class="badge team">${membros}</span>
+      <button class="small" onclick="renomearEspecialidade('${e.id}')">Salvar</button>
+      <button class="small ghost" title="${membros ? 'Mova as pessoas antes de remover' : 'Remover especialidade'}" ${membros ? 'disabled' : ''} onclick="removerEspecialidade('${e.id}')"><span style="color:${membros?'var(--text-3)':'var(--danger)'};">&#128465;</span></button>
+    </div>`;
+  };
+  return `
+  <div class="card" style="margin-bottom:14px;">
+    <h3 style="margin-bottom:10px;">Equipes</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${DB.equipes.map(linhaEquipe).join("") || `<p class="empty-hint" style="padding:8px 0;">Nenhuma equipe cadastrada.</p>`}
+    </div>
+    <div class="row" style="gap:8px;margin-top:12px;">
+      <input id="eq-nova" placeholder="Nome da nova equipe" style="flex:1;min-width:0;" />
+      <button class="small primary" onclick="criarEquipe()">Adicionar</button>
+    </div>
+  </div>
+  <div class="card">
+    <h3 style="margin-bottom:10px;">Especialidades</h3>
+    <div style="display:flex;flex-direction:column;gap:8px;">
+      ${DB.especialidades.map(linhaEsp).join("") || `<p class="empty-hint" style="padding:8px 0;">Nenhuma especialidade cadastrada.</p>`}
+    </div>
+    <div class="row" style="gap:8px;margin-top:12px;">
+      <input id="esp-nova" placeholder="Nome da nova especialidade" style="flex:1;min-width:0;" />
+      <button class="small primary" onclick="criarEspecialidade()">Adicionar</button>
+    </div>
+  </div>`;
+}
+
+function renderEstruturaPreview(){
+  return `<div class="card" style="margin-bottom:14px;background:var(--info-bg);border-color:#c9dcea;">
+    <p style="font-size:12.5px;margin:0;">Esta é a mesma visão que todo mundo enxerga na aba Organograma. Para mudar, use a aba Hierarquia.</p>
+  </div>
+  ${renderOrgTree()}`;
+}
+
+async function renomearEquipe(id){
+  const campo = document.getElementById("eq-nome-" + id);
+  const nome = campo ? campo.value.trim() : "";
+  if(!nome){ toast("Informe um nome para a equipe."); return; }
+  const { error } = await sb.from("equipes").update({ nome }).eq("id", id);
+  if(error){ toast("Erro ao renomear: " + error.message); return; }
+  const e = DB.equipes.find(x => x.id === id);
+  if(e) e.nome = nome;
+  toast("Equipe renomeada.");
+  render();
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+async function removerEquipe(id){
+  const e = DB.equipes.find(x => x.id === id);
+  if(!e) return;
+  if(DB.usuarios.some(u => u.equipe_id === id && u.ativo !== false)){
+    toast("Mova as pessoas dessa equipe antes de removê-la.");
+    return;
+  }
+  if(!confirm(`Remover a equipe "${e.nome}"?`)) return;
+  const { error } = await sb.from("equipes").delete().eq("id", id);
+  if(error){ toast("Erro ao remover: " + error.message); return; }
+  DB.equipes = DB.equipes.filter(x => x.id !== id);
+  toast("Equipe removida.");
+  render();
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+async function criarEquipe(){
+  const campo = document.getElementById("eq-nova");
+  const nome = campo ? campo.value.trim() : "";
+  if(!nome){ toast("Informe o nome da nova equipe."); return; }
+  const { data, error } = await sb.from("equipes").insert({ nome }).select().single();
+  if(error){ toast("Erro ao criar equipe: " + error.message); return; }
+  DB.equipes.push(data);
+  toast("Equipe criada.");
+  render();
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+async function renomearEspecialidade(id){
+  const campo = document.getElementById("esp-nome-" + id);
+  const nome = campo ? campo.value.trim() : "";
+  if(!nome){ toast("Informe um nome para a especialidade."); return; }
+  const { error } = await sb.from("especialidades").update({ nome }).eq("id", id);
+  if(error){ toast("Erro ao renomear: " + error.message); return; }
+  const e = DB.especialidades.find(x => x.id === id);
+  if(e) e.nome = nome;
+  toast("Especialidade renomeada.");
+  render();
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+async function removerEspecialidade(id){
+  const e = DB.especialidades.find(x => x.id === id);
+  if(!e) return;
+  if(DB.usuarios.some(u => u.especialidade_id === id && u.ativo !== false)){
+    toast("Mova as pessoas dessa especialidade antes de removê-la.");
+    return;
+  }
+  if(!confirm(`Remover a especialidade "${e.nome}"?`)) return;
+  const { error } = await sb.from("especialidades").delete().eq("id", id);
+  if(error){ toast("Erro ao remover: " + error.message); return; }
+  DB.especialidades = DB.especialidades.filter(x => x.id !== id);
+  toast("Especialidade removida.");
   render();
   lastManualLoadAt = Date.now();
   loadAll();
