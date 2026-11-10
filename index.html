@@ -118,6 +118,8 @@
   .estrutura-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;}
   @media(max-width:760px){.estrutura-grid{grid-template-columns:1fr;}}
   .estrutura-row{padding:12px;border-left:4px solid var(--brand-green);}
+  .btn-wa{background:#25D366;border-color:#1da851;color:#fff;font-weight:700;}
+  .btn-wa:hover{background:#1da851;border-color:#17803e;color:#fff;}
   h1{font-size:23px;font-weight:800;margin:0;letter-spacing:-.01em;}
   h2{font-size:17px;font-weight:800;margin:0 0 4px;}
   h3{font-size:13.5px;font-weight:800;margin:0;text-transform:uppercase;letter-spacing:.03em;color:var(--text-2);}
@@ -441,6 +443,83 @@ function statusLabel(s){
   return { a_fazer:"A fazer", em_andamento:"Em andamento", concluida:"Concluída", cancelada:"Cancelada",
     pendente_aprovacao:"Aguardando aprovação", recusada:"Recusada",
     aguardando_reatribuicao:"Aguardando reatribuição", impedida:"Impedida" }[s] || s;
+}
+
+// ---------- Compartilhar no WhatsApp ----------
+let deepLinkTaskId = null;
+function linkDoApp(hash){
+  try{ return location.origin + location.pathname + (hash || ""); }
+  catch(e){ return hash || ""; }
+}
+function soDigitos(v){ return (v || "").replace(/\D/g, ""); }
+function numeroWa(u){
+  let d = soDigitos(u && u.telefone);
+  if(!d) return "";
+  if(d.length === 10 || d.length === 11) d = "55" + d;
+  return d;
+}
+function abrirWhatsApp(texto, numero){
+  const url = "https://wa.me/" + (numero || "") + "?text=" + encodeURIComponent(texto);
+  try{ window.open(url, "_blank", "noopener"); }
+  catch(e){ location.href = url; }
+}
+function botaoWa(onclick, rotulo){
+  return `<button class="small btn-wa" onclick="${onclick}"><span style="margin-right:5px;">&#128241;</span>${rotulo}</button>`;
+}
+function compartilharTarefaWa(id){
+  const t = DB.tarefas.find(x => x.id === id);
+  if(!t) return;
+  const resp = getUser(t.atribuido_a);
+  const f = farolInfo(t);
+  const linhas = [
+    (t.origem === "acao" ? "*Ação:* " : "*Tarefa:* ") + t.titulo,
+    "Responsável: " + (resp ? resp.nome : "sem responsável"),
+    "Prioridade: " + t.prioridade + " · Situação: " + f.label,
+    "Prazo: " + fmtDate(t.prazo),
+    t.instrucao ? "Instrução: " + t.instrucao : "",
+    "",
+    "Abrir no app: " + linkDoApp("#tarefa=" + t.id)
+  ].filter(Boolean);
+  abrirWhatsApp(linhas.join("\n"), numeroWa(resp));
+}
+function compartilharReuniaoWa(id){
+  const r = DB.reunioes.find(x => x.id === id);
+  if(!r) return;
+  const parts = (r.participantes || []).map(getUser).filter(Boolean).map(p => p.nome);
+  const linhas = [
+    "*Reunião:* " + r.titulo,
+    fmtDate(r.data) + (r.hora_inicio ? " · " + r.hora_inicio + (r.hora_fim ? "–" + r.hora_fim : "") : ""),
+    r.local ? "Local: " + r.local : "",
+    parts.length ? "Participantes: " + parts.join(", ") : "",
+    r.pauta ? "Pauta: " + r.pauta : "",
+    "",
+    "Calendário das salas: " + linkDoApp("#salas")
+  ].filter(Boolean);
+  abrirWhatsApp(linhas.join("\n"));
+}
+function compartilharSalasWa(){
+  abrirWhatsApp([
+    "*Calendário das salas de reunião*",
+    "Consulta aberta, sem login — dá para ver a ocupação e reservar direto pelo formulário.",
+    "",
+    linkDoApp("#salas")
+  ].join("\n"));
+}
+function compartilharOrgWa(){
+  abrirWhatsApp([
+    "*Organograma da equipe*",
+    "Consulta aberta, sem login.",
+    "",
+    linkDoApp("#org")
+  ].join("\n"));
+}
+function compartilharPainelWa(){
+  abrirWhatsApp([
+    "*Painel de Ações*",
+    "Todas as ações de Qualidade, SESMT, Engenharia e Planejamento — com responsável, prazo e situação.",
+    "",
+    linkDoApp()
+  ].join("\n"));
 }
 function computePerformance(userId){
   const tasks = tasksFor(userId);
@@ -786,7 +865,8 @@ function renderOrgTree(){
 }
 function renderOrgContent(){
   return `<h1 style="margin-bottom:4px;">Organograma</h1>
-    <p class="muted-text" style="margin-bottom:16px;">Atualizado automaticamente conforme os líderes ajustam suas equipes</p>
+    <p class="muted-text" style="margin-bottom:12px;">Atualizado automaticamente conforme os líderes ajustam suas equipes</p>
+    <div style="margin-bottom:16px;">${botaoWa("compartilharOrgWa()", "Compartilhar no WhatsApp")}</div>
     ${renderOrgTree()}`;
 }
 function renderOrgPublic(){
@@ -1386,7 +1466,8 @@ function renderSalasPublico(){
     <p class="muted-text" style="margin-bottom:12px;">Consulta aberta — mostra a ocupação das salas. Para reservar, use o botão abaixo.</p>
     <div class="card" style="background:var(--surface-2);padding:10px 12px;margin-bottom:16px;">
       <p class="muted-text" style="margin:0 0 4px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;">Link desta consulta</p>
-      <p class="mono" style="margin:0;font-size:11.5px;word-break:break-all;">${esc(location.origin + location.pathname + "#salas")}</p>
+      <p class="mono" style="margin:0 0 8px;font-size:11.5px;word-break:break-all;">${esc(linkDoApp("#salas"))}</p>
+      ${botaoWa("compartilharSalasWa()", "Compartilhar no WhatsApp")}
     </div>
 
     <div class="row" style="gap:8px;margin-bottom:16px;flex-wrap:wrap;">
@@ -1585,10 +1666,11 @@ function renderReunioesContent(cu){
           </div>
           ${autor ? `<div class="muted-text" style="margin-top:4px;font-size:11px;">criada por ${esc(autor.nome)}</div>` : ""}
         </div>
-        ${souDono ? `<div class="row" style="gap:4px;flex-shrink:0;">
-          <button class="small ghost" onclick="cancelarReuniao('${r.id}')">Cancelar</button>
-          <button class="small ghost" aria-label="Remover" onclick="removerReuniao('${r.id}')"><span style="color:var(--danger);">&#128465;</span></button>
-        </div>` : ""}
+        <div class="row" style="gap:4px;flex-shrink:0;flex-wrap:wrap;">
+          ${botaoWa(`compartilharReuniaoWa('${r.id}')`, "Convidar")}
+          ${souDono ? `<button class="small ghost" onclick="cancelarReuniao('${r.id}')">Cancelar</button>
+          <button class="small ghost" aria-label="Remover" onclick="removerReuniao('${r.id}')"><span style="color:var(--danger);">&#128465;</span></button>` : ""}
+        </div>
       </div>
     </div>`;
   };
@@ -1834,7 +1916,8 @@ function renderPainelAcoesContent(cu){
   const conta = lbl => todas.filter(t => statusAcao(t).label === lbl).length;
 
   return `<h1 style="margin-bottom:4px;">Painel de Ações</h1>
-  <p class="muted-text" style="margin-bottom:16px;">Ações setoriais abertas para toda a empresa. Consulta aberta a todos — apenas o responsável e sua liderança podem atualizar.</p>
+  <p class="muted-text" style="margin-bottom:12px;">Ações setoriais abertas para toda a empresa. Consulta aberta a todos — apenas o responsável e sua liderança podem atualizar.</p>
+  <div style="margin-bottom:16px;">${botaoWa("compartilharPainelWa()", "Compartilhar no WhatsApp")}</div>
 
   <div class="grid3" style="gap:10px;margin-bottom:16px;">
     <div class="card" style="text-align:center;"><div style="font-size:22px;font-weight:800;color:var(--danger);">${conta("Atrasada")}</div><p class="muted-text" style="margin:0;">Atrasada(s)</p></div>
@@ -2916,6 +2999,11 @@ async function afterLogin(session){
   STATE.tab = "minhas"; STATE.view = "kanban";
   setupRealtime();
   go("dashboard");
+  if(deepLinkTaskId){
+    const alvo = deepLinkTaskId;
+    deepLinkTaskId = null;
+    if(DB.tarefas.some(t => t.id === alvo)) openTask(alvo);
+  }
 }
 async function logout(){
   await sb.auth.signOut();
@@ -2996,6 +3084,9 @@ function renderPerfilContent(){
       <input id="pf-nome" value="${esc(cu.nome)}" style="margin-bottom:10px;" />
       <label class="field-label">Cargo</label>
       <input id="pf-cargo" value="${esc(cu.cargo)}" style="margin-bottom:10px;" />
+      <label class="field-label">WhatsApp (DDD + número)</label>
+      <input id="pf-telefone" value="${esc(cu.telefone || "")}" placeholder="Ex: 94 99999-0000" style="margin-bottom:4px;" />
+      <p class="muted-text" style="margin:0 0 10px;">Opcional. Serve para o botão "Cobrar no WhatsApp" abrir sua conversa direto.</p>
       <label class="field-label">Equipe</label>
       <select id="pf-equipe" style="margin-bottom:10px;">
         <option value="">Sem equipe definida</option>
@@ -3026,7 +3117,9 @@ async function salvarPerfil(){
   const equipeId = await resolveExtensibleId("equipes", "pf-equipe", "pf-nova-equipe", "equipe");
   const especialidadeId = await resolveExtensibleId("especialidades", "pf-especialidade", "pf-nova-especialidade", "especialidade");
   if(!nome || !cargo) return;
-  const ok = await mutate(sb.from("usuarios").update({ nome, cargo, lider_id: liderId, equipe_id: equipeId, especialidade_id: especialidadeId }).eq("id", STATE.currentUserId));
+  const campoTel = document.getElementById("pf-telefone");
+  const telefone = campoTel ? (campoTel.value.trim() || null) : null;
+  const ok = await mutate(sb.from("usuarios").update({ nome, cargo, telefone, lider_id: liderId, equipe_id: equipeId, especialidade_id: especialidadeId }).eq("id", STATE.currentUserId));
   if(ok){ toast("Perfil atualizado."); go("dashboard"); }
 }
 function renderNotifDrop(notifs){
@@ -4239,6 +4332,7 @@ function renderTaskModal(){
               <option value="Baixa" ${t.prioridade==='Baixa'?'selected':''}>Baixa</option>
             </select>`
           : `<span class="badge muted">${esc(t.prioridade)}</span>`}
+        ${botaoWa(`compartilharTarefaWa('${t.id}')`, assignee && numeroWa(assignee) && !isOwner ? `Cobrar ${esc(assignee.nome.split(" ")[0])}` : "Enviar no WhatsApp")}
       </div>
       ${renderInstrucao(t, podeGerenciar)}
       ${isOwner && ["a_fazer","em_andamento","concluida"].includes(t.status) ? `
@@ -4410,6 +4504,15 @@ async function resolverImpedimento(taskId){
       return;
     }catch(e){ /* sem conexão: segue o fluxo normal */ }
   }
+  if(rota === "org" || rota === "organograma"){
+    try{
+      await loadPublicOrg();
+      STATE.screen = "org";
+      render();
+      return;
+    }catch(e){ /* sem conexão: segue o fluxo normal */ }
+  }
+  if(rota.indexOf("tarefa=") === 0) deepLinkTaskId = rota.slice(7);
   try{
     const { data: { session }, error } = await sb.auth.getSession();
     if(error) throw error;
