@@ -346,6 +346,26 @@
   .mm-roteiro-avanco .barra{height:7px;}
   .mm-roteiro-pct{font-size:11.5px;font-weight:800;min-width:34px;font-variant-numeric:tabular-nums;}
   .mm-apagado{opacity:.45;}
+  /* área arrastável (radial e árvore) */
+  .mm-pan{overflow:auto;border-radius:var(--radius-lg);cursor:grab;touch-action:pan-x pan-y;background:#fbfbf8;max-height:600px;}
+  .mm-pan.mm-arrastando{cursor:grabbing;user-select:none;}
+  .mm-pan:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+  .mm-pan .mm-canvas{border-radius:0;}
+  /* árvore horizontal */
+  .mm-arv-tela{position:relative;transform-origin:0 0;padding:12px;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:24px 24px;}
+  .mm-arv-no{position:absolute;border-left:5px solid var(--border-strong);border-radius:12px;overflow:visible;}
+  .mm-arv-abrir{display:flex;flex-direction:column;justify-content:space-between;gap:5px;width:100%;height:100%;border:none;border-radius:0 12px 12px 0;padding:8px 10px;color:#fff;text-align:left;box-shadow:0 2px 7px rgba(16,24,40,.16);font-weight:600;}
+  .mm-arv-abrir:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));box-shadow:0 5px 14px rgba(16,24,40,.24);}
+  .mm-arv-abrir:focus-visible{outline:3px solid var(--text);outline-offset:2px;}
+  .mm-arv-topo{display:flex;align-items:center;gap:5px;min-width:0;}
+  .mm-arv-titulo{font-size:.86em;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+  .mm-arv-barra{display:block;width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
+  .mm-arv-barra > span{display:block;height:100%;background:#fff;border-radius:2px;}
+  .mm-arv-rodape{display:flex;gap:7px;flex-wrap:wrap;font-size:.68em;font-weight:700;opacity:.95;}
+  .mm-arv-toggle{position:absolute;right:-15px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:2px;min-width:30px;height:26px;padding:0 6px;border-radius:13px;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text-2);font-size:14px;font-weight:800;line-height:1;box-shadow:var(--shadow-sm);z-index:3;}
+  .mm-arv-toggle:hover{background:var(--surface-2);border-color:var(--text-3);color:var(--text);}
+  .mm-arv-toggle-n{font-size:10.5px;font-weight:700;}
+  @media(max-width:760px){.mm-pan{max-height:460px;}}
   /* checklist no editor */
   .mm-ck-editor{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
   .mm-ck-linha-ed{display:flex;align-items:center;gap:8px;}
@@ -932,6 +952,7 @@ function render(){
   if(STATE.openTaskId){ document.body.insertAdjacentHTML("beforeend", renderTaskModal()); }
   if(STATE.avisarWa){ document.body.insertAdjacentHTML("beforeend", renderAvisoWaModal()); }
   if(STATE.mmEditor){ const cuMm = currentUser(); if(cuMm) document.body.insertAdjacentHTML("beforeend", renderMindmapEditor(cuMm)); }
+  if(STATE.screen === "brainstorm" && STATE.brainstormTab === "mapa"){ mmAjustarRolagemArvore(); }
   if(STATE.searchOpen){ document.body.insertAdjacentHTML("beforeend", renderGlobalSearchOverlay()); }
   if(STATE.screen === "main" && STATE.tab === "equipe" && STATE.equipeSub === "desvios"){ setTimeout(renderDeviosChart, 0); }
   if(STATE.screen === "dashboard" && cu){ setTimeout(() => renderWeeklyChart(cu), 0); }
@@ -2812,7 +2833,19 @@ const MM_STATUS = {
   concluido:    { nome:"Concluído",    simbolo:"&#10003;",cor:"#1c8a4b", claro:"#e4f4ea", escuro:"#0f5a30" }
 };
 const MM_STATUS_PADRAO = "nao_iniciado";
-function mmStatus(node){ return MM_STATUS[node && node.status] || MM_STATUS[MM_STATUS_PADRAO]; }
+// Item com sub-itens não tem status próprio: ele é o retrato dos filhos.
+// Sem isso o pai pode ficar "Não iniciado" mostrando 77% de avanço.
+function mmStatusEfetivo(node){
+  const filhos = (node && node.filhos) || [];
+  if(!filhos.length) return (node && node.status) || MM_STATUS_PADRAO;
+  const sts = filhos.map(mmStatusEfetivo);
+  if(sts.indexOf("parado") !== -1) return "parado";
+  if(sts.every(x => x === "concluido")) return "concluido";
+  if(sts.every(x => x === "nao_iniciado")) return "nao_iniciado";
+  if(sts.every(x => x === "concluido" || x === "revisao")) return "revisao";
+  return "em_andamento";
+}
+function mmStatus(node){ return MM_STATUS[mmStatusEfetivo(node)] || MM_STATUS[MM_STATUS_PADRAO]; }
 // Em item com sub-itens o avanço é calculado pelos filhos — não dá para dizer
 // que a etapa está 80% pronta se as partes dela não estão.
 function mmChecklist(node){ return (node && Array.isArray(node.checklist)) ? node.checklist : []; }
@@ -2856,6 +2889,43 @@ async function mmToggleCheck(nodeId, itemId){
   render();
   await saveMindmapTree(row.id, node === row.arvore ? node : row.arvore);
 }
+// Arrastar funciona a partir de qualquer ponto, inclusive de cima de um bloco.
+// Clique e arrasto são separados pela distância: até 5px é clique, além disso
+// é navegação e o clique seguinte é descartado.
+let mmArrasto = null;
+let mmCliqueBloqueado = false;
+function mmPanInicio(ev, el){
+  if(ev.button && ev.button !== 0) return;
+  if(ev.target && ev.target.closest && ev.target.closest("input,select,textarea")) return;
+  mmArrasto = { el: el, x: ev.clientX, y: ev.clientY, sl: el.scrollLeft, st: el.scrollTop, moveu: false, pid: ev.pointerId };
+}
+function mmPanMove(ev){
+  if(!mmArrasto) return;
+  const dx = ev.clientX - mmArrasto.x, dy = ev.clientY - mmArrasto.y;
+  if(!mmArrasto.moveu){
+    if(Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    mmArrasto.moveu = true;
+    mmArrasto.el.classList.add("mm-arrastando");
+    try{ mmArrasto.el.setPointerCapture(mmArrasto.pid); }catch(e){}
+  }
+  mmArrasto.el.scrollLeft = mmArrasto.sl - dx;
+  mmArrasto.el.scrollTop  = mmArrasto.st - dy;
+  if(ev.preventDefault) ev.preventDefault();
+}
+function mmPanFim(ev){
+  if(!mmArrasto) return;
+  if(mmArrasto.moveu){
+    mmCliqueBloqueado = true;
+    mmArrasto.el.classList.remove("mm-arrastando");
+    try{ mmArrasto.el.releasePointerCapture(mmArrasto.pid); }catch(e){}
+  }
+  mmArrasto = null;
+}
+if(typeof document !== "undefined"){
+  document.addEventListener("click", function(ev){
+    if(mmCliqueBloqueado){ mmCliqueBloqueado = false; ev.stopPropagation(); ev.preventDefault(); }
+  }, true);
+}
 function mmAlternarChecklist(nodeId){
   STATE.mmChecklistAberto = STATE.mmChecklistAberto || {};
   STATE.mmChecklistAberto[nodeId] = !STATE.mmChecklistAberto[nodeId];
@@ -2863,7 +2933,7 @@ function mmAlternarChecklist(nodeId){
 }
 function mmTemFilhos(node){ return !!(node.filhos && node.filhos.length); }
 function mmAtrasado(node){
-  return !!(node.prazo && node.prazo < todayISO() && node.status !== "concluido");
+  return !!(node.prazo && node.prazo < todayISO() && mmStatusEfetivo(node) !== "concluido");
 }
 function mmResumo(tree){
   const contagem = { nao_iniciado:0, em_andamento:0, revisao:0, parado:0, concluido:0 };
@@ -2871,7 +2941,7 @@ function mmResumo(tree){
   (function anda(n){
     (n.filhos||[]).forEach(f => {
       total++;
-      const st = f.status || MM_STATUS_PADRAO;
+      const st = mmStatusEfetivo(f);
       if(contagem[st] !== undefined) contagem[st]++;
       if(f.prazo){ comPrazo++; if(mmAtrasado(f)) atrasados++; }
       anda(f);
@@ -2880,7 +2950,7 @@ function mmResumo(tree){
   return { total, contagem, atrasados, comPrazo, avanco: mmAvanco(tree) };
 }
 function mmTemStatus(node, st){
-  if((node.status||MM_STATUS_PADRAO) === st) return true;
+  if(mmStatusEfetivo(node) === st) return true;
   return (node.filhos||[]).some(f => mmTemStatus(f, st));
 }
 // Qual dimensão pinta a bolha: avanço (padrão) ou tipo. A outra continua
@@ -2913,7 +2983,7 @@ function mmAjustarFonte(passo){
 }
 function mmAjustarZoom(passo){
   const p = mmPrefs();
-  mmSetPref("zoom", Math.max(0.8, Math.min(1.3, Math.round(((p.zoom||1) + passo) * 100) / 100)));
+  mmSetPref("zoom", Math.max(0.6, Math.min(2, Math.round(((p.zoom||1) + passo) * 100) / 100)));
 }
 
 function findMindmapNode(tree, id){
@@ -3309,6 +3379,7 @@ function renderMindmapControles(prefs){
       <span class="mm-ctrl-rotulo">Vista</span>
       <div class="seg">
         <button class="seg-btn ${prefs.vista==='radial'?'active':''}" aria-pressed="${prefs.vista==='radial'}" onclick="mmSetPref('vista','radial')">Radial</button>
+        <button class="seg-btn ${prefs.vista==='arvore'?'active':''}" aria-pressed="${prefs.vista==='arvore'}" onclick="mmSetPref('vista','arvore')">Árvore</button>
         <button class="seg-btn ${prefs.vista==='roteiro'?'active':''}" aria-pressed="${prefs.vista==='roteiro'}" onclick="mmSetPref('vista','roteiro')">Roteiro</button>
       </div>
     </div>
@@ -3325,7 +3396,7 @@ function renderMindmapControles(prefs){
       <span class="mm-ctrl-valor" aria-live="polite">${prefs.fonte}%</span>
       <button class="small" onclick="mmAjustarFonte(10)" aria-label="Aumentar o tamanho do texto">A+</button>
     </div>
-    ${prefs.vista==='radial' ? `<div class="mm-ctrl-grupo">
+    ${prefs.vista!=='roteiro' ? `<div class="mm-ctrl-grupo">
       <span class="mm-ctrl-rotulo">Zoom</span>
       <button class="small" onclick="mmAjustarZoom(-0.1)" aria-label="Afastar">&minus;</button>
       <span class="mm-ctrl-valor" aria-live="polite">${Math.round(prefs.zoom*100)}%</span>
@@ -3349,7 +3420,7 @@ function renderMindmapRoteiro(cu, tree, souDono){
     const atrasado = mmAtrasado(node);
     const ck = mmChecklistStats(node);
     const aberto = (STATE.mmChecklistAberto || {})[node.id];
-    const combina = !filtro || (node.status||MM_STATUS_PADRAO) === filtro;
+    const combina = !filtro || mmStatusEfetivo(node) === filtro;
     return `<li class="mm-roteiro-item">
       <div class="mm-roteiro-linha ${combina?'':'mm-apagado'}" style="border-left:4px solid ${t.cor};">
         ${filhos.length ? `<button class="mm-roteiro-toggle" aria-expanded="${!fechado}" aria-label="${fechado?'Expandir':'Recolher'} ${esc(node.texto)}" onclick="mmAlternarRamo('${node.id}')">${fechado ? "&#9654;" : "&#9660;"}</button>` : `<span class="mm-roteiro-toggle-vazio" aria-hidden="true"></span>`}
@@ -3402,10 +3473,116 @@ function renderMindmapRoteiro(cu, tree, souDono){
   </div>`;
 }
 
+// Árvore horizontal: raiz à esquerda, níveis para a direita, irmãos empilhados.
+// Posição determinística — nunca sobrepõe, por mais itens que existam.
+function mmLayoutArvore(raiz, recolhidos){
+  const LARG = 198, ALT = 70, GAPX = 54, GAPY = 14;
+  const nos = [], linhas = [];
+  let cursorY = 0;
+  function medir(node, prof){
+    const fechado = !!recolhidos[node.id];
+    const filhos = (!fechado && node.filhos) ? node.filhos : [];
+    const reg = { node: node, prof: prof, x: prof * (LARG + GAPX), y: 0, filhos: [], fechado: fechado, nFilhos: (node.filhos||[]).length };
+    if(!filhos.length){
+      reg.y = cursorY;
+      cursorY += ALT + GAPY;
+    } else {
+      reg.filhos = filhos.map(f => medir(f, prof + 1));
+      reg.y = (reg.filhos[0].y + reg.filhos[reg.filhos.length - 1].y) / 2;
+    }
+    nos.push(reg);
+    return reg;
+  }
+  medir(raiz, 0);
+  nos.forEach(r => r.filhos.forEach(f => linhas.push([r, f])));
+  const largura = nos.reduce((m,n) => Math.max(m, n.x), 0) + LARG + 24;
+  const altura = Math.max(cursorY, ALT) + 24;
+  return { nos: nos, linhas: linhas, largura: largura, altura: altura, LARG: LARG, ALT: ALT };
+}
+function renderMindmapArvore(cu, tree, souDono, prefs){
+  const recolhidos = STATE.mmRecolhidos || {};
+  const L = mmLayoutArvore(tree, recolhidos);
+  const zoom = prefs.zoom || 1;
+
+  const caminhos = L.linhas.map(([pai, filho]) => {
+    const x1 = pai.x + L.LARG, y1 = pai.y + L.ALT/2;
+    const x2 = filho.x,        y2 = filho.y + L.ALT/2;
+    const meio = x1 + (x2 - x1) / 2;
+    const cor = mmCorSecundaria(filho.node, prefs);
+    return `<path d="M ${x1} ${y1} H ${meio} V ${y2} H ${x2}" fill="none" stroke="${cor}" stroke-width="2" stroke-linejoin="round" opacity=".8" />`;
+  }).join("");
+
+  const blocos = L.nos.map(r => {
+    const node = r.node;
+    const t = mmTipo(node), st = mmStatus(node);
+    const pct = mmAvanco(node);
+    const ck = mmChecklistStats(node);
+    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
+    const atrasado = mmAtrasado(node);
+    return `<div class="mm-arv-no" ${r.prof===0?'data-raiz="1"':''} style="left:${r.x}px;top:${r.y}px;width:${L.LARG}px;height:${L.ALT}px;border-left-color:${t.cor};">
+      <button type="button" class="mm-arv-abrir" style="background:${mmCorDe(node, prefs)};"
+        onclick="${souDono ? `mmAbrirEditor('${node.id}','editar')` : `mindmapFocar('${node.id}')`}"
+        aria-label="${esc(node.texto)}. ${t.nome}. ${st.nome}, ${pct} por cento.${ck.total?` Checklist ${ck.feitos} de ${ck.total}.`:''}${souDono?' Editar':''}">
+        <span class="mm-arv-topo">
+          <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" aria-hidden="true">${t.simbolo}</span>
+          <span class="mm-simbolo mm-simbolo-sm" style="background:${st.cor};" aria-hidden="true">${st.simbolo}</span>
+          <span class="mm-arv-titulo">${esc(node.texto)}</span>
+        </span>
+        <span class="mm-arv-barra"><span style="width:${pct}%;"></span></span>
+        <span class="mm-arv-rodape">
+          <span>${pct}%</span>
+          ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
+          ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
+          ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
+        </span>
+      </button>
+      ${r.nFilhos ? `<button type="button" class="mm-arv-toggle" aria-expanded="${!r.fechado}"
+        aria-label="${r.fechado?'Expandir':'Recolher'} ${esc(node.texto)} (${r.nFilhos})"
+        onclick="mmAlternarRamo('${node.id}')">${r.fechado ? "+" : "&minus;"}<span class="mm-arv-toggle-n">${r.nFilhos}</span></button>` : ""}
+    </div>`;
+  }).join("");
+
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <p class="muted-text" style="margin:0;">Arraste para navegar. Use <strong>+</strong> e <strong>&minus;</strong> para abrir e fechar cada ramo.${souDono ? " Clique num bloco para editar." : ""}</p>
+      <div class="row" style="gap:6px;">
+        <button class="small ghost" onclick="STATE.mmRecolhidos={};render()">Expandir tudo</button>
+        <button class="small ghost" onclick="mmRecolherTudo()">Recolher tudo</button>
+        ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('root','novo')">+ Novo item</button>` : ""}
+      </div>
+    </div>
+    <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" tabindex="0" role="group" aria-label="Árvore do projeto, arraste para navegar">
+      <div class="mm-arv-tela" style="width:${L.largura}px;height:${L.altura}px;transform:scale(${zoom});font-size:${prefs.fonte}%;">
+        <svg width="${L.largura}" height="${L.altura}" aria-hidden="true" style="position:absolute;inset:0;">${caminhos}</svg>
+        ${blocos}
+      </div>
+    </div>
+  </div>`;
+}
+// A raiz fica no meio vertical da árvore; sem isso o mapa abre rolado.
+function mmAjustarRolagemArvore(){
+  const pan = document.querySelector(".mm-pan");
+  if(!pan || pan.getAttribute("data-ajustado")) return;
+  const raiz = pan.querySelector('[data-raiz="1"]');
+  if(!raiz) return;
+  pan.scrollTop = Math.max(0, raiz.offsetTop + raiz.offsetHeight/2 - pan.clientHeight/2);
+  pan.setAttribute("data-ajustado", "1");
+}
+function mmRecolherTudo(){
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row) return;
+  const mapa = {};
+  (function anda(n){ if((n.filhos||[]).length){ mapa[n.id] = true; n.filhos.forEach(anda); } })(row.arvore);
+  delete mapa[row.arvore.id];
+  STATE.mmRecolhidos = mapa;
+  render();
+}
+
 function renderMindmapRadial(cu, tree, foco, souDono, prefs){
   const filhos = foco.filhos || [];
   const n = filhos.length;
-  const raio = 34 * (prefs.zoom || 1);
+  const raio = 34;
   let svgLinks = "";
 
   const bloco = (node, central) => {
@@ -3468,11 +3645,12 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
       <p class="muted-text" style="margin:0;">Clique numa bolha para entrar nela. ${souDono ? "A bolha central abre o editor." : "Você está vendo um mapa compartilhado."}</p>
       ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('${foco.id}','novo')">+ Novo item aqui</button>` : ""}
     </div>
-    <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;">
+    <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" tabindex="0" role="group" aria-label="Mapa radial, arraste para navegar">
+    <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;width:${Math.round((prefs.zoom||1)*100)}%;height:${Math.round(480*(prefs.zoom||1))}px;">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
       ${nodesHtml}
       ${!n ? `<p class="mm-vazio">Nenhum item ligado ainda.${souDono?' Use "+ Novo item aqui".':''}</p>` : ""}
-    </div>
+    </div></div>
     ${filhos.length ? `<div class="mm-ordenar">
       <span class="muted-text">Reordenar:</span>
       ${filhos.map((f,i) => `<span class="mm-ordenar-item">
@@ -3543,7 +3721,9 @@ function renderMindmapContent(cu){
   </div>` : ""}
   <div id="mindmap-search-results"></div>
   ${renderMindmapLegenda(prefs)}`}
-  ${prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono) : renderMindmapRadial(cu, tree, foco, souDono, prefs)}`;
+  ${prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono)
+    : prefs.vista === "arvore" ? renderMindmapArvore(cu, tree, souDono, prefs)
+    : renderMindmapRadial(cu, tree, foco, souDono, prefs)}`;
 }
 function renderEscalaContent(cu){
   const atual = getAlocacaoAtual(cu.id);
