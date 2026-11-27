@@ -351,7 +351,16 @@
   .mm-pan.mm-arrastando{cursor:grabbing;user-select:none;}
   .mm-pan:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .mm-pan .mm-canvas{border-radius:0;}
-  .mm-mundo{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;}
+  .mm-mundo{position:absolute;left:0;top:0;transform-origin:0 0;}
+  .mm-arrastando .mm-mundo{will-change:transform;}
+  .mm-pan.mm-simples .mm-node-rodape,
+  .mm-pan.mm-simples .mm-arv-rodape,
+  .mm-pan.mm-simples .mm-node-barra,
+  .mm-pan.mm-simples .mm-arv-barra,
+  .mm-pan.mm-simples .mm-marcas,
+  .mm-pan.mm-simples .mm-arv-alca{display:none;}
+  .mm-pan.mm-simples .mm-rad-bloco,
+  .mm-pan.mm-simples .mm-arv-abrir{justify-content:center;box-shadow:none;}
   /* barra flutuante sobre o mapa */
   .mm-barra-flut{position:absolute;left:14px;top:14px;z-index:6;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-md);}
   .mm-bf{width:34px;height:34px;padding:0;border:none;background:none;box-shadow:none;border-radius:50%;font-size:15px;line-height:1;color:var(--text-2);display:flex;align-items:center;justify-content:center;}
@@ -2959,6 +2968,9 @@ function mmAplicarTransform(){
   mundo.style.transform = `translate(${Math.round(v.x||0)}px,${Math.round(v.y||0)}px) scale(${v.z})`;
   const rotulo = document.getElementById("mm-zoom-valor");
   if(rotulo) rotulo.textContent = Math.round(v.z*100) + "%";
+  // Muito afastado, os detalhes do bloco são ilegíveis e só custam pintura.
+  const janela = mundo.parentElement;
+  if(janela) janela.classList.toggle("mm-simples", v.z < 0.55);
 }
 function mmGuardarZoom(){
   if(mmZoomTimer) clearTimeout(mmZoomTimer);
@@ -3037,7 +3049,7 @@ if(typeof document !== "undefined"){
 // Barra flutuante sobre o mapa, como nas ferramentas de mapa mental.
 function renderMmBarraFlutuante(souDono, temRamos){
   return `<div class="mm-barra-flut" role="group" aria-label="Controles do mapa">
-    ${temRamos ? `<button type="button" class="mm-bf" onclick="STATE.mmRecolhidos={};render()" aria-label="Expandir todos os ramos" title="Expandir tudo">&#9661;</button>
+    ${temRamos ? `<button type="button" class="mm-bf" onclick="STATE.mmRecolhidos={};mmRedesenharMapa()" aria-label="Expandir todos os ramos" title="Expandir tudo">&#9661;</button>
     <button type="button" class="mm-bf" onclick="mmRecolherTudo()" aria-label="Recolher todos os ramos" title="Recolher tudo">&#9651;</button>
     <span class="mm-bf-sep"></span>` : ""}
     <button type="button" class="mm-bf" onclick="mmZoom(0.1)" aria-label="Aproximar" title="Aproximar">+</button>
@@ -3547,7 +3559,24 @@ function mindmapFocar(nodeId){ STATE.mindmapFocoId = nodeId; STATE.mindmapBusca 
 function mmAlternarRamo(nodeId){
   STATE.mmRecolhidos = STATE.mmRecolhidos || {};
   STATE.mmRecolhidos[nodeId] = !STATE.mmRecolhidos[nodeId];
-  render();
+  mmRedesenharMapa();
+}
+// Recolher um ramo não muda menu, painel nem legenda. Redesenhar só a área do
+// mapa evita reconstruir a página inteira a cada clique.
+function mmRedesenharMapa(){
+  const area = document.getElementById("mm-area");
+  const cu = currentUser();
+  if(!area || !cu){ render(); return; }
+  const row = getViewedMindmapRow(cu);
+  if(!row){ render(); return; }
+  const prefs = mmPrefs();
+  const tree = row.arvore;
+  const souDono = row.dono_id === cu.id;
+  let foco = findMindmapNode(tree, STATE.mindmapFocoId) || tree;
+  area.innerHTML = prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono)
+    : prefs.vista === "arvore" ? renderMindmapArvore(cu, tree, souDono, prefs)
+    : renderMindmapRadial(cu, tree, foco, souDono, prefs);
+  mmAjustarRolagemArvore();
 }
 function updateMindmapSearch(){
   const input = document.getElementById("mindmap-busca-input");
@@ -3907,7 +3936,7 @@ function mmRecolherTudo(){
   (function anda(n){ if((n.filhos||[]).length){ mapa[n.id] = true; n.filhos.forEach(anda); } })(row.arvore);
   delete mapa[row.arvore.id];
   STATE.mmRecolhidos = mapa;
-  render();
+  mmRedesenharMapa();
 }
 
 // Radial multinível. Cada nó abre os filhos num setor angular em torno da
@@ -3922,10 +3951,13 @@ function mmLayoutRadial(raiz, recolhidos){
   const filhosDe = (node, prof) => (prof > 0 && recolhidos[node.id]) ? [] : (node.filhos || []);
   // Quantas "pontas" cada ramo tem. O setor de cada filho é proporcional a
   // isso — senão um ramo com 1 item recebe o mesmo ângulo de um com 10.
+  const cachePontas = new Map();
   function pontas(node, prof){
+    if(cachePontas.has(node)) return cachePontas.get(node);
     const f = filhosDe(node, prof);
-    if(!f.length) return 1;
-    return f.reduce((soma, c) => soma + pontas(c, prof+1), 0);
+    const n = f.length ? f.reduce((soma, c) => soma + pontas(c, prof+1), 0) : 1;
+    cachePontas.set(node, n);
+    return n;
   }
   const nos = [], linhas = [];
   function anda(node, prof, angCentro, abertura, x, y){
@@ -3936,20 +3968,28 @@ function mmLayoutRadial(raiz, recolhidos){
     const filhos = filhosDe(node, prof);
     if(!filhos.length) return reg;
     const tf = tam(prof+1);
-    // O raio tem que ser grande o bastante para o arco comportar os filhos
-    // lado a lado: comprimento do arco = raio x ângulo (em radianos).
+    // Arco disponível = raio x ângulo. Em setores estreitos o raio necessário
+    // explodia (chegou a 26.000px de tela), então ele é limitado e o que não
+    // couber num anel vai para um anel um pouco mais afastado, alternando.
     const aberturaRad = Math.max(abertura, 1) * Math.PI/180;
-    const precisa = (filhos.length * (tf.w + FOLGA)) / aberturaRad;
-    const r = Math.max(raioMin(prof+1), precisa);
+    const rMin = raioMin(prof+1);
+    const rTeto = rMin * 2.1;
+    const precisaUm = (filhos.length * (tf.w + FOLGA)) / aberturaRad;
+    const escalonar = precisaUm > rTeto && filhos.length > 1;
+    const porAnel = escalonar ? Math.ceil(filhos.length / 2) : filhos.length;
+    const precisa = (porAnel * (tf.w + FOLGA)) / aberturaRad;
+    const r = Math.max(rMin, Math.min(precisa, rTeto));
+    const degrau = tf.h + 30;
     const total = filhos.reduce((soma, c) => soma + pontas(c, prof+1), 0) || filhos.length;
     let acumulado = 0;
-    filhos.forEach((f) => {
+    filhos.forEach((f, i) => {
       const peso = pontas(f, prof+1) / total;
       const fatia = abertura * peso;
       const a = angCentro - abertura/2 + acumulado + fatia/2;
       acumulado += fatia;
       const rad = a * Math.PI/180;
-      const filhoReg = anda(f, prof+1, a, Math.min(fatia * 0.92, 150), x + r*Math.cos(rad), y + r*Math.sin(rad));
+      const rf = r + (escalonar && (i % 2) ? degrau : 0);
+      const filhoReg = anda(f, prof+1, a, Math.min(fatia * 0.92, 150), x + rf*Math.cos(rad), y + rf*Math.sin(rad));
       linhas.push([reg, filhoReg]);
     });
     return reg;
@@ -4102,9 +4142,9 @@ function renderMindmapContent(cu){
   </div>` : ""}
   <div id="mindmap-search-results"></div>
   ${renderMindmapLegenda(prefs)}`}
-  ${prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono)
+  <div id="mm-area">${prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono)
     : prefs.vista === "arvore" ? renderMindmapArvore(cu, tree, souDono, prefs)
-    : renderMindmapRadial(cu, tree, foco, souDono, prefs)}`;
+    : renderMindmapRadial(cu, tree, foco, souDono, prefs)}</div>`;
 }
 function renderEscalaContent(cu){
   const atual = getAlocacaoAtual(cu.id);
