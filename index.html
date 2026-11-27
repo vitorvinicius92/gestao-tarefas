@@ -308,11 +308,44 @@
 
   /* mapa mental radial */
   .mm-canvas{position:relative;width:100%;height:480px;border-radius:16px;overflow:hidden;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:22px 22px;}
-  .mm-node{position:absolute;transform:translate(-50%,-50%);border:none;border-radius:16px;padding:12px 15px;font-size:1em;font-weight:600;text-align:center;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(16,24,40,.2);max-width:150px;min-width:74px;min-height:48px;transition:transform var(--t),box-shadow var(--t);z-index:2;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .mm-node{position:absolute;transform:translate(-50%,-50%);border:none;border-radius:16px;padding:11px 14px 11px 18px;overflow:hidden;font-size:1em;font-weight:600;text-align:center;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(16,24,40,.2);max-width:150px;min-width:74px;min-height:48px;transition:transform var(--t),box-shadow var(--t);z-index:2;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:5px;}
   .mm-node:hover{transform:translate(-50%,-50%) scale(1.04);box-shadow:0 6px 16px rgba(16,24,40,.26);background-image:linear-gradient(rgba(0,0,0,.12),rgba(0,0,0,.12));}
   .mm-node:focus-visible{outline:3px solid var(--text);outline-offset:3px;}
-  .mm-node.mm-center{font-size:1.1em;padding:16px 20px;max-width:180px;z-index:3;}
+  .mm-node.mm-center{font-size:1.1em;padding:15px 19px 15px 23px;max-width:195px;z-index:3;}
   .mm-node[disabled]{opacity:1;cursor:default;}
+  /* bloco do mapa: preenchimento = dimensão escolhida, faixa lateral = a outra */
+  .mm-faixa{position:absolute;left:0;top:0;bottom:0;width:6px;border-radius:16px 0 0 16px;}
+  .mm-marcas{display:flex;gap:4px;}
+  .mm-node-texto{display:block;max-width:100%;}
+  .mm-node-barra{display:block;width:100%;height:5px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;}
+  .mm-node-barra > span{display:block;height:100%;background:#fff;border-radius:3px;}
+  .mm-node-rodape{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;font-size:.72em;font-weight:700;opacity:.95;}
+  .mm-atrasado{text-decoration:underline;text-decoration-style:wavy;}
+  .mm-node-flag{position:absolute;top:-7px;left:-7px;width:21px;height:21px;border-radius:11px;background:var(--danger);color:#fff;font-size:12px;font-weight:800;line-height:21px;border:2px solid var(--surface);}
+  /* painel de controle */
+  .mm-painel{margin-bottom:12px;}
+  .mm-painel-topo{display:flex;gap:22px;flex-wrap:wrap;align-items:flex-start;}
+  .mm-painel-status{display:flex;gap:7px;flex-wrap:wrap;flex:1;min-width:250px;}
+  .mm-status-chip{display:flex;align-items:center;gap:7px;padding:8px 11px;border:1.5px solid var(--border);border-radius:var(--radius-sm);background:var(--surface);box-shadow:none;font-weight:600;}
+  .mm-status-chip:hover{background:var(--surface-2);border-color:var(--border-strong);}
+  .mm-status-chip.ativo{border-color:var(--accent);background:var(--accent-bg);}
+  .mm-status-chip-n{font-size:16px;font-weight:800;}
+  .mm-status-chip-nome{font-size:11.5px;color:var(--text-2);}
+  .mm-painel-alerta{margin:14px 0 0;padding:9px 12px;background:var(--danger-bg);color:var(--danger-text);border-radius:var(--radius-sm);font-size:12.5px;}
+  .mm-painel-filtro{margin:12px 0 0;font-size:12.5px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .mm-aviso-calc{padding:11px 13px;background:var(--surface-2);border-radius:var(--radius-sm);font-size:12.5px;margin-bottom:14px;}
+  .mm-ed-dupla{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+  @media(max-width:520px){.mm-ed-dupla{grid-template-columns:1fr;}}
+  /* etiquetas do roteiro */
+  .mm-roteiro-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:3px;}
+  .mm-tag{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:700;padding:2px 8px;border-radius:5px;}
+  .mm-tag-neutra{background:var(--surface-2);color:var(--text-2);}
+  .mm-tag-atraso{background:var(--danger-bg);color:var(--danger-text);}
+  .mm-ponto{width:7px;height:7px;border-radius:50%;}
+  .mm-roteiro-avanco{display:flex;align-items:center;gap:8px;margin-top:6px;max-width:330px;}
+  .mm-roteiro-avanco .barra{height:7px;}
+  .mm-roteiro-pct{font-size:11.5px;font-weight:800;min-width:34px;font-variant-numeric:tabular-nums;}
+  .mm-apagado{opacity:.45;}
   .mm-node-contador{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;border-radius:11px;background:var(--surface);color:var(--text);border:1.5px solid currentColor;font-size:11px;font-weight:800;line-height:18px;padding:0 4px;}
   .mm-label{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border-strong);border-radius:6px;padding:3px 8px;font-size:.78em;font-weight:600;color:var(--text-2);z-index:2;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
   .mm-vazio{position:absolute;inset:auto 10% 18%;text-align:center;color:var(--text-2);font-size:13px;}
@@ -2713,7 +2746,7 @@ async function removerEspecialidade(id){
 function renderBrainstormContent(cu){
   if(!STATE.brainstormTab) STATE.brainstormTab = "notas";
   return `<h1 style="margin-bottom:4px;">Brainstorm</h1>
-  <p class="muted-text" style="margin-bottom:16px;">Notas rápidas (só neste navegador) e um mapa mental salvo no banco, compartilhável com quem você autorizar.</p>
+  <p class="muted-text" style="margin-bottom:16px;">Notas rápidas (só neste navegador) e um mapa mental que também controla avanço — salvo no banco e compartilhável com quem você autorizar.</p>
   <div class="tabs" style="margin-top:0;">
     <button class="small ${STATE.brainstormTab==='notas'?'active':''}" onclick="STATE.brainstormTab='notas';render()">Notas</button>
     <button class="small ${STATE.brainstormTab==='mapa'?'active':''}" onclick="STATE.brainstormTab='mapa';render()">Mapa Mental</button>
@@ -2755,9 +2788,63 @@ function mmTipo(node){ return MM_TIPOS[node && node.tipo] || MM_TIPOS[MM_TIPO_PA
 const MM_CAMADAS = ["Visão geral","Fundamentos","Desenvolvimento","Aplicação prática","Aprofundamento"];
 function mmCamadaNome(prof){ return MM_CAMADAS[Math.min(Math.max(prof,0), MM_CAMADAS.length-1)]; }
 
+// Controle de avanço — a segunda dimensão de cada ideia.
+const MM_STATUS = {
+  nao_iniciado: { nome:"Não iniciado", simbolo:"&#9675;", cor:"#8494a8", claro:"#eef1f6", escuro:"#4a5868" },
+  em_andamento: { nome:"Em andamento", simbolo:"&#9656;", cor:"#1660ae", claro:"#e8f0f9", escuro:"#0f4278" },
+  revisao:      { nome:"Em revisão",   simbolo:"&#8635;", cor:"#a97800", claro:"#fcf3dc", escuro:"#6b4c00" },
+  parado:       { nome:"Parado",       simbolo:"!",       cor:"#c0392b", claro:"#fdeae7", escuro:"#8f2a1d" },
+  concluido:    { nome:"Concluído",    simbolo:"&#10003;",cor:"#1c8a4b", claro:"#e4f4ea", escuro:"#0f5a30" }
+};
+const MM_STATUS_PADRAO = "nao_iniciado";
+function mmStatus(node){ return MM_STATUS[node && node.status] || MM_STATUS[MM_STATUS_PADRAO]; }
+// Em item com sub-itens o avanço é calculado pelos filhos — não dá para dizer
+// que a etapa está 80% pronta se as partes dela não estão.
+function mmAvanco(node){
+  const filhos = node.filhos || [];
+  if(!filhos.length){
+    if(node.status === "concluido") return 100;
+    return Math.max(0, Math.min(100, Number(node.avanco) || 0));
+  }
+  return Math.round(filhos.reduce((soma,f) => soma + mmAvanco(f), 0) / filhos.length);
+}
+function mmTemFilhos(node){ return !!(node.filhos && node.filhos.length); }
+function mmAtrasado(node){
+  return !!(node.prazo && node.prazo < todayISO() && node.status !== "concluido");
+}
+function mmResumo(tree){
+  const contagem = { nao_iniciado:0, em_andamento:0, revisao:0, parado:0, concluido:0 };
+  let total = 0, atrasados = 0, comPrazo = 0;
+  (function anda(n){
+    (n.filhos||[]).forEach(f => {
+      total++;
+      const st = f.status || MM_STATUS_PADRAO;
+      if(contagem[st] !== undefined) contagem[st]++;
+      if(f.prazo){ comPrazo++; if(mmAtrasado(f)) atrasados++; }
+      anda(f);
+    });
+  })(tree);
+  return { total, contagem, atrasados, comPrazo, avanco: mmAvanco(tree) };
+}
+function mmTemStatus(node, st){
+  if((node.status||MM_STATUS_PADRAO) === st) return true;
+  return (node.filhos||[]).some(f => mmTemStatus(f, st));
+}
+// Qual dimensão pinta a bolha: avanço (padrão) ou tipo. A outra continua
+// visível como símbolo, então nenhuma informação depende só da cor.
+function mmCorDe(node, prefs){
+  const base = (prefs.cor === "tipo") ? mmTipo(node) : mmStatus(node);
+  return prefs.contraste ? base.escuro : base.cor;
+}
+// A outra dimensão nunca some: vira a faixa lateral do bloco.
+function mmCorSecundaria(node, prefs){
+  const base = (prefs.cor === "tipo") ? mmStatus(node) : mmTipo(node);
+  return base.cor;
+}
+
 // Preferências de leitura — por pessoa, neste navegador. Nunca carregam dado do mapa.
 function mmPrefs(){
-  const padrao = { fonte:100, contraste:false, foco:false, vista:"radial", zoom:1 };
+  const padrao = { fonte:100, contraste:false, foco:false, vista:"radial", zoom:1, cor:"avanco" };
   try{ return Object.assign(padrao, JSON.parse(localStorage.getItem("gt_mm_prefs") || "{}")); }
   catch(e){ return padrao; }
 }
@@ -2832,15 +2919,33 @@ async function saveMindmapTree(rowId, tree){
 
 // ---------- Editor de ideia (substitui os prompt() do navegador) ----------
 function mmAbrirEditor(nodeId, modo){
-  STATE.mmEditor = { nodeId: nodeId, modo: modo || "editar", tipo: null };
+  STATE.mmEditor = { nodeId: nodeId, modo: modo || "editar", tipo: null, status: null, rascunho: null };
   render();
   setTimeout(() => { const c = document.getElementById("mm-ed-texto"); if(c) c.focus(); }, 30);
 }
 function mmFecharEditor(){ STATE.mmEditor = null; render(); }
 function mmEscolherTipo(tipo){
   if(!STATE.mmEditor) return;
+  mmGuardarRascunho();
   STATE.mmEditor.tipo = tipo;
   render();
+}
+function mmEscolherStatus(status){
+  if(!STATE.mmEditor) return;
+  mmGuardarRascunho();
+  STATE.mmEditor.status = status;
+  render();
+}
+// Trocar tipo/status re-renderiza o modal; guardamos o que já foi digitado
+// para o texto não se perder no caminho.
+function mmGuardarRascunho(){
+  const ed = STATE.mmEditor;
+  if(!ed) return;
+  const pega = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
+  ed.rascunho = Object.assign({}, ed.rascunho, {
+    texto: pega("mm-ed-texto"), rotulo: pega("mm-ed-rotulo"), link: pega("mm-ed-link"),
+    avanco: pega("mm-ed-avanco"), responsavel_id: pega("mm-ed-resp"), prazo: pega("mm-ed-prazo")
+  });
 }
 function renderMindmapEditor(cu){
   const ed = STATE.mmEditor;
@@ -2850,24 +2955,62 @@ function renderMindmapEditor(cu){
   const node = findMindmapNode(row.arvore, ed.nodeId);
   if(!node) return "";
   const novo = ed.modo === "novo";
-  const alvo = novo ? { texto:"", tipo:MM_TIPO_PADRAO, rotulo:"", link:"" } : node;
+  const base = novo ? { texto:"", tipo:MM_TIPO_PADRAO, status:MM_STATUS_PADRAO, rotulo:"", link:"", avanco:0, responsavel_id:"", prazo:"" } : node;
+  const alvo = Object.assign({}, base, ed.rascunho || {});
   const tipoAtivo = ed.tipo || alvo.tipo || MM_TIPO_PADRAO;
+  const statusAtivo = ed.status || alvo.status || MM_STATUS_PADRAO;
   const ehRaiz = node.id === "root" && !novo;
+  const temFilhos = !novo && mmTemFilhos(node);
+  const avancoCalc = temFilhos ? mmAvanco(node) : 0;
+  const avancoProprio = Math.max(0, Math.min(100, Number(alvo.avanco) || 0));
   return `<div class="modal-overlay" onclick="if(event.target===this) mmFecharEditor()">
     <div class="modal" style="max-width:520px;" role="dialog" aria-modal="true" aria-labelledby="mm-ed-titulo">
-      <h2 id="mm-ed-titulo" style="margin-bottom:4px;">${novo ? "Nova ideia" : "Editar ideia"}</h2>
+      <h2 id="mm-ed-titulo" style="margin-bottom:4px;">${novo ? "Novo item" : "Editar item"}</h2>
       <p class="muted-text" style="margin-bottom:16px;">${novo ? `Ligada a &ldquo;${esc(node.texto)}&rdquo; · entra no nível ${(findMindmapPath(row.arvore, node.id)||[]).length + 1} (${esc(mmCamadaNome((findMindmapPath(row.arvore, node.id)||[]).length))})` : `Nível ${(findMindmapPath(row.arvore, node.id)||[]).length} · ${esc(mmCamadaNome((findMindmapPath(row.arvore, node.id)||[]).length - 1))}`}</p>
 
-      <label class="field-label" for="mm-ed-texto">Texto da ideia</label>
-      <textarea id="mm-ed-texto" rows="2" placeholder="Uma ideia principal por bloco" style="margin-bottom:14px;">${esc(alvo.texto)}</textarea>
+      <label class="field-label" for="mm-ed-texto">Nome do item</label>
+      <textarea id="mm-ed-texto" rows="2" placeholder="Uma ideia ou entrega por bloco" style="margin-bottom:14px;">${esc(alvo.texto)}</textarea>
 
-      <p class="field-label" id="mm-ed-tipo-label">Tipo — define a cor e o símbolo</p>
+      <p class="field-label" id="mm-ed-tipo-label">Tipo de conteúdo</p>
       <div class="mm-tipo-grid" role="group" aria-labelledby="mm-ed-tipo-label" style="margin-bottom:14px;">
         ${Object.keys(MM_TIPOS).map(k => { const t = MM_TIPOS[k]; const on = k === tipoAtivo; return `
           <button type="button" class="mm-tipo-opcao ${on?'ativo':''}" aria-pressed="${on}" onclick="mmEscolherTipo('${k}')">
             <span class="mm-simbolo" style="background:${t.cor};">${t.simbolo}</span>
             <span class="mm-tipo-texto"><strong>${t.nome}</strong><span>${t.desc}</span></span>
           </button>`; }).join("")}
+      </div>
+
+      <p class="field-label" id="mm-ed-status-label">Como está o avanço</p>
+      <div class="mm-tipo-grid" role="group" aria-labelledby="mm-ed-status-label" style="margin-bottom:14px;">
+        ${Object.keys(MM_STATUS).map(k => { const st = MM_STATUS[k]; const on = k === statusAtivo; return `
+          <button type="button" class="mm-tipo-opcao ${on?'ativo':''}" aria-pressed="${on}" onclick="mmEscolherStatus('${k}')">
+            <span class="mm-simbolo" style="background:${st.cor};">${st.simbolo}</span>
+            <span class="mm-tipo-texto"><strong>${st.nome}</strong></span>
+          </button>`; }).join("")}
+      </div>
+
+      ${temFilhos ? `<div class="mm-aviso-calc">
+        <strong>${avancoCalc}% concluído</strong> — calculado a partir dos ${(node.filhos||[]).length} sub-itens. Para mudar, ajuste o avanço de cada um.
+        <div class="barra" style="margin-top:7px;"><div class="barra-fill" style="width:${avancoCalc}%;background:${mmStatus({status:statusAtivo}).cor};"></div></div>
+      </div>` : `
+      <label class="field-label" for="mm-ed-avanco">Avanço: <span id="mm-ed-avanco-valor">${avancoProprio}%</span></label>
+      <input type="range" id="mm-ed-avanco" min="0" max="100" step="5" value="${avancoProprio}"
+             oninput="const v=document.getElementById('mm-ed-avanco-valor'); if(v) v.textContent=this.value+'%';"
+             style="margin-bottom:14px;padding:0;" aria-describedby="mm-ed-avanco-dica" />
+      <p class="muted-text" id="mm-ed-avanco-dica" style="margin:-8px 0 14px;">Marcar como "Concluído" leva para 100% automaticamente.</p>`}
+
+      <div class="mm-ed-dupla">
+        <div>
+          <label class="field-label" for="mm-ed-resp">Responsável</label>
+          <select id="mm-ed-resp">
+            <option value="">Sem responsável</option>
+            ${DB.usuarios.filter(u => u.ativo !== false).sort((x,y)=>x.nome.localeCompare(y.nome)).map(u => `<option value="${u.id}" ${alvo.responsavel_id===u.id?'selected':''}>${esc(u.nome)}</option>`).join("")}
+          </select>
+        </div>
+        <div>
+          <label class="field-label" for="mm-ed-prazo">Prazo</label>
+          <input type="date" id="mm-ed-prazo" value="${esc(alvo.prazo||"")}" />
+        </div>
       </div>
 
       ${ehRaiz ? "" : `
@@ -2878,7 +3021,7 @@ function renderMindmapEditor(cu){
       <input id="mm-ed-link" value="${esc(alvo.link||"")}" placeholder="https://..." style="margin-bottom:18px;" />
 
       <div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap;">
-        ${(!novo && !ehRaiz) ? `<button class="ghost" style="margin-right:auto;color:var(--danger-text);" onclick="mindmapDeleteNode('${cu.id}','${node.id}')">Remover ideia</button>` : ""}
+        ${(!novo && !ehRaiz) ? `<button class="ghost" style="margin-right:auto;color:var(--danger-text);" onclick="mindmapDeleteNode('${cu.id}','${node.id}')">Remover item</button>` : ""}
         <button class="ghost" onclick="mmFecharEditor()">Cancelar</button>
         <button class="primary" onclick="mmSalvarEditor()">${novo ? "Adicionar" : "Salvar"}</button>
       </div>
@@ -2896,20 +3039,33 @@ async function mmSalvarEditor(){
   const campoLink = document.getElementById("mm-ed-link");
   const texto = campoTexto ? campoTexto.value.trim() : "";
   if(!texto){ toast("Escreva o texto da ideia."); if(campoTexto) campoTexto.focus(); return; }
-  const tipo = ed.tipo || MM_TIPO_PADRAO;
+  const tipo = ed.tipo || (ed.modo === "novo" ? MM_TIPO_PADRAO : (findMindmapNode(row.arvore, ed.nodeId)||{}).tipo || MM_TIPO_PADRAO);
+  const status = ed.status || (ed.modo === "novo" ? MM_STATUS_PADRAO : (findMindmapNode(row.arvore, ed.nodeId)||{}).status || MM_STATUS_PADRAO);
   const rotulo = campoRotulo ? campoRotulo.value.trim() : "";
   const link = campoLink ? campoLink.value.trim() : "";
+  const campoAvanco = document.getElementById("mm-ed-avanco");
+  const campoResp = document.getElementById("mm-ed-resp");
+  const campoPrazo = document.getElementById("mm-ed-prazo");
+  const responsavel_id = campoResp ? (campoResp.value || null) : null;
+  const prazo = campoPrazo ? (campoPrazo.value || null) : null;
+  let avanco = campoAvanco ? Math.max(0, Math.min(100, Number(campoAvanco.value) || 0)) : null;
+  if(status === "concluido") avanco = 100;
   const tree = row.arvore;
   if(ed.modo === "novo"){
     const pai = findMindmapNode(tree, ed.nodeId);
     if(!pai) return;
     pai.filhos = pai.filhos || [];
-    pai.filhos.push({ id: uid(), texto: texto, tipo: tipo, rotulo: rotulo, link: link, filhos: [] });
+    pai.filhos.push({ id: uid(), texto: texto, tipo: tipo, status: status, avanco: avanco || 0,
+      responsavel_id: responsavel_id, prazo: prazo, rotulo: rotulo, link: link, filhos: [] });
   } else {
     const node = findMindmapNode(tree, ed.nodeId);
     if(!node) return;
     node.texto = texto;
     node.tipo = tipo;
+    node.status = status;
+    if(avanco !== null) node.avanco = avanco;
+    node.responsavel_id = responsavel_id;
+    node.prazo = prazo;
     if(campoRotulo) node.rotulo = rotulo;
     node.link = link;
   }
@@ -2919,7 +3075,7 @@ async function mmSalvarEditor(){
 }
 async function mindmapDeleteNode(userId, nodeId){
   if(nodeId === "root") return;
-  if(!confirm("Remover essa ideia e tudo que estiver ligado a ela?")) return;
+  if(!confirm("Remover esse item e tudo que estiver ligado a ele?")) return;
   const row = getViewedMindmapRow(currentUser());
   if(!row) return;
   const tree = row.arvore;
@@ -2989,25 +3145,61 @@ async function mindmapCompartilhar(userId, alvoId){
   render();
 }
 
-function renderMindmapLegenda(){
+function renderMindmapLegenda(prefs){
+  const porTipo = prefs.cor === "tipo";
+  const mapa = porTipo ? MM_TIPOS : MM_STATUS;
   if(!STATE.mmLegendaAberta) {
     return `<button class="small ghost" style="margin-bottom:12px;" aria-expanded="false" onclick="STATE.mmLegendaAberta=true;render()">Ver o que cada cor significa &#9662;</button>`;
   }
   return `<div class="card" style="margin-bottom:12px;">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;">
-      <h3>O que cada cor significa</h3>
+      <h3>O que cada cor significa — ${porTipo ? "tipo de ideia" : "avanço"}</h3>
       <button class="small ghost" aria-expanded="true" onclick="STATE.mmLegendaAberta=false;render()">Recolher &#9652;</button>
     </div>
     <div class="mm-legenda">
-      ${Object.keys(MM_TIPOS).map(k => { const t = MM_TIPOS[k]; return `<div class="mm-legenda-item">
+      ${Object.keys(mapa).map(k => { const t = mapa[k]; return `<div class="mm-legenda-item">
         <span class="mm-simbolo" style="background:${t.cor};">${t.simbolo}</span>
-        <span><strong>${t.nome}</strong><span class="muted-text" style="display:block;">${t.desc}</span></span>
+        <span><strong>${t.nome}</strong>${t.desc?`<span class="muted-text" style="display:block;">${t.desc}</span>`:""}</span>
       </div>`; }).join("")}
     </div>
-    <p class="muted-text" style="margin:12px 0 0;">Cada tipo tem cor, símbolo e nome escrito — dá para seguir o mapa sem depender da cor.</p>
+    <p class="muted-text" style="margin:12px 0 0;">A cor das bolhas está mostrando <strong>${porTipo ? "o tipo de ideia" : "o avanço"}</strong>. ${porTipo ? "O avanço" : "O tipo"} continua visível no símbolo de cada item, então nada depende só da cor.</p>
   </div>`;
 }
 
+function renderMindmapPainel(tree, prefs){
+  const r = mmResumo(tree);
+  if(!r.total) return "";
+  const filtro = STATE.mmFiltroStatus || null;
+  const corGeral = r.avanco >= 100 ? "var(--ok)" : r.avanco > 0 ? "var(--accent)" : "var(--text-3)";
+  return `<section class="card mm-painel" aria-label="Controle de avanço">
+    <div class="mm-painel-topo">
+      <div style="min-width:170px;">
+        <h3 style="margin-bottom:6px;">Avanço geral</h3>
+        <div class="row" style="align-items:baseline;gap:9px;">
+          <span class="metric" style="font-size:30px;color:${corGeral};">${r.avanco}%</span>
+          <span class="muted-text">${r.total} item${r.total===1?'':'s'}</span>
+        </div>
+        <div class="barra" style="margin-top:8px;"><div class="barra-fill" style="width:${r.avanco}%;background:${corGeral};"></div></div>
+      </div>
+      <div class="mm-painel-status">
+        ${Object.keys(MM_STATUS).map(k => {
+          const st = MM_STATUS[k];
+          const n = r.contagem[k] || 0;
+          const on = filtro === k;
+          return `<button class="mm-status-chip ${on?'ativo':''}" aria-pressed="${on}"
+            onclick="STATE.mmFiltroStatus=${on?'null':`'${k}'`};mmSetPref('vista','roteiro')"
+            title="${on?'Mostrar tudo de novo':'Ver só os itens com status '+st.nome}">
+            <span class="mm-simbolo mm-simbolo-sm" style="background:${st.cor};" aria-hidden="true">${st.simbolo}</span>
+            <span class="mm-status-chip-n">${n}</span>
+            <span class="mm-status-chip-nome">${st.nome}</span>
+          </button>`;
+        }).join("")}
+      </div>
+    </div>
+    ${r.atrasados ? `<p class="mm-painel-alerta"><strong>${r.atrasados}</strong> item${r.atrasados===1?'':'s'} com prazo vencido e ainda não concluído${r.atrasados===1?'':'s'}.</p>` : (r.comPrazo ? `<p class="muted-text" style="margin:12px 0 0;">Nenhum prazo vencido entre os ${r.comPrazo} itens com data definida.</p>` : `<p class="muted-text" style="margin:12px 0 0;">Nenhum item tem prazo definido ainda — dá para colocar um ao editar cada ideia.</p>`)}
+    ${filtro ? `<p class="mm-painel-filtro">Mostrando só <strong>${MM_STATUS[filtro].nome}</strong> no roteiro. <button class="small ghost" onclick="STATE.mmFiltroStatus=null;render()">Limpar filtro</button></p>` : ""}
+  </section>`;
+}
 function renderMindmapControles(prefs){
   return `<div class="mm-controles" role="group" aria-label="Preferências de leitura">
     <div class="mm-ctrl-grupo">
@@ -3015,6 +3207,13 @@ function renderMindmapControles(prefs){
       <div class="seg">
         <button class="seg-btn ${prefs.vista==='radial'?'active':''}" aria-pressed="${prefs.vista==='radial'}" onclick="mmSetPref('vista','radial')">Radial</button>
         <button class="seg-btn ${prefs.vista==='roteiro'?'active':''}" aria-pressed="${prefs.vista==='roteiro'}" onclick="mmSetPref('vista','roteiro')">Roteiro</button>
+      </div>
+    </div>
+    <div class="mm-ctrl-grupo">
+      <span class="mm-ctrl-rotulo">Cor mostra</span>
+      <div class="seg">
+        <button class="seg-btn ${prefs.cor!=='tipo'?'active':''}" aria-pressed="${prefs.cor!=='tipo'}" onclick="mmSetPref('cor','avanco')">Avanço</button>
+        <button class="seg-btn ${prefs.cor==='tipo'?'active':''}" aria-pressed="${prefs.cor==='tipo'}" onclick="mmSetPref('cor','tipo')">Tipo</button>
       </div>
     </div>
     <div class="mm-ctrl-grupo">
@@ -3036,23 +3235,40 @@ function renderMindmapControles(prefs){
 
 function renderMindmapRoteiro(cu, tree, souDono){
   const recolhidos = STATE.mmRecolhidos || {};
+  const filtro = STATE.mmFiltroStatus || null;
   const linha = (node, prof, numero) => {
-    const t = mmTipo(node);
+    if(filtro && !mmTemStatus(node, filtro)) return "";
+    const t = mmTipo(node), st = mmStatus(node);
     const filhos = node.filhos || [];
     const fechado = !!recolhidos[node.id];
-    return `<li class="mm-roteiro-item" style="--prof:${prof};">
-      <div class="mm-roteiro-linha">
+    const pct = mmAvanco(node);
+    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
+    const atrasado = mmAtrasado(node);
+    const combina = !filtro || (node.status||MM_STATUS_PADRAO) === filtro;
+    return `<li class="mm-roteiro-item">
+      <div class="mm-roteiro-linha ${combina?'':'mm-apagado'}" style="border-left:4px solid ${t.cor};">
         ${filhos.length ? `<button class="mm-roteiro-toggle" aria-expanded="${!fechado}" aria-label="${fechado?'Expandir':'Recolher'} ${esc(node.texto)}" onclick="mmAlternarRamo('${node.id}')">${fechado ? "&#9654;" : "&#9660;"}</button>` : `<span class="mm-roteiro-toggle-vazio" aria-hidden="true"></span>`}
-        <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" aria-hidden="true">${t.simbolo}</span>
+        <span class="mm-simbolo mm-simbolo-sm" style="background:${st.cor};" title="${st.nome}" aria-hidden="true">${st.simbolo}</span>
         <span class="mm-roteiro-texto">
           <span class="mm-roteiro-numero">${numero}</span>
           <strong>${esc(node.texto)}</strong>
-          <span class="mm-roteiro-meta">${t.nome}${node.rotulo ? ` · ligação: ${esc(node.rotulo)}` : ""}${filhos.length ? ` · ${filhos.length} sub-ideia${filhos.length===1?'':'s'}` : ""}</span>
+          <span class="mm-roteiro-tags">
+            <span class="mm-tag" style="background:${t.claro};color:${t.escuro};"><span class="mm-ponto" style="background:${t.cor};"></span>${t.nome}</span>
+            <span class="mm-tag" style="background:${st.claro};color:${st.escuro};">${st.nome}</span>
+            ${resp ? `<span class="mm-tag mm-tag-neutra">${esc(resp.nome.split(" ")[0])}</span>` : ""}
+            ${node.prazo ? `<span class="mm-tag ${atrasado?'mm-tag-atraso':'mm-tag-neutra'}">${atrasado?'Venceu ':'Prazo '}${fmtDate(node.prazo)}</span>` : ""}
+            ${node.rotulo ? `<span class="mm-tag mm-tag-neutra">ligação: ${esc(node.rotulo)}</span>` : ""}
+          </span>
+          <span class="mm-roteiro-avanco">
+            <span class="barra" style="flex:1;"><span class="barra-fill" style="display:block;height:100%;width:${pct}%;background:${st.cor};"></span></span>
+            <span class="mm-roteiro-pct">${pct}%</span>
+            ${filhos.length ? `<span class="muted-text" style="font-size:11px;">calculado de ${filhos.length} sub-item${filhos.length===1?'':'s'}</span>` : ""}
+          </span>
         </span>
         <span class="mm-roteiro-acoes">
           ${node.link ? `<a class="small ghost" href="${esc(node.link)}" target="_blank" rel="noopener" aria-label="Abrir link de ${esc(node.texto)}">Link</a>` : ""}
           <button class="small ghost" onclick="mindmapFocar('${node.id}')" aria-label="Ver ${esc(node.texto)} no radial">Radial</button>
-          ${souDono ? `<button class="small ghost" onclick="mmAbrirEditor('${node.id}','novo')" aria-label="Adicionar ideia dentro de ${esc(node.texto)}">+ Ideia</button>
+          ${souDono ? `<button class="small ghost" onclick="mmAbrirEditor('${node.id}','novo')" aria-label="Adicionar item dentro de ${esc(node.texto)}">+ Item</button>
           <button class="small ghost" onclick="mmAbrirEditor('${node.id}','editar')" aria-label="Editar ${esc(node.texto)}">Editar</button>` : ""}
           <button class="small ghost" onclick="mindmapVirarTarefa('${cu.id}','${node.id}')" aria-label="Transformar ${esc(node.texto)} em tarefa">Virar tarefa</button>
         </span>
@@ -3063,12 +3279,10 @@ function renderMindmapRoteiro(cu, tree, souDono){
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
       <div>
-        <h3 style="margin-bottom:2px;">Roteiro de leitura</h3>
-        <p class="muted-text" style="margin:0;">Comece no 1 e siga a numeração. Use os triângulos para recolher o que não interessa agora.</p>
+        <h3 style="margin-bottom:2px;">Roteiro e controle</h3>
+        <p class="muted-text" style="margin:0;">Cada item mostra tipo, avanço, responsável e prazo. A barra lateral colorida é o tipo.</p>
       </div>
-      <div class="row" style="gap:6px;">
-        <button class="small ghost" onclick="STATE.mmRecolhidos={};render()">Expandir tudo</button>
-      </div>
+      <button class="small ghost" onclick="STATE.mmRecolhidos={};render()">Expandir tudo</button>
     </div>
     <ol class="mm-roteiro-lista mm-roteiro-raiz">${linha(tree, 0, "1")}</ol>
   </div>`;
@@ -3079,34 +3293,54 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
   const n = filhos.length;
   const raio = 34 * (prefs.zoom || 1);
   let svgLinks = "";
-  const tf = mmTipo(foco);
-  let nodesHtml = `<button type="button" class="mm-node mm-center" style="left:50%;top:50%;background:${prefs.contraste ? "#000" : tf.escuro};" ${souDono?`onclick="mmAbrirEditor('${foco.id}','editar')"`:'disabled'} aria-label="Ideia central: ${esc(foco.texto)}${souDono?'. Clique para editar':''}">
-    <span class="mm-simbolo mm-simbolo-sm" style="background:${tf.cor};" aria-hidden="true">${tf.simbolo}</span>
-    <span>${esc(foco.texto)}</span>
-  </button>`;
+
+  const bloco = (node, central) => {
+    const t = mmTipo(node), st = mmStatus(node);
+    const fundo = mmCorDe(node, prefs);
+    const faixa = mmCorSecundaria(node, prefs);
+    const pct = mmAvanco(node);
+    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
+    const atrasado = mmAtrasado(node);
+    const nFilhos = (node.filhos||[]).length;
+    return `
+      <span class="mm-faixa" style="background:${faixa};" aria-hidden="true"></span>
+      <span class="mm-marcas" aria-hidden="true">
+        <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" title="${t.nome}">${t.simbolo}</span>
+        <span class="mm-simbolo mm-simbolo-sm" style="background:${st.cor};" title="${st.nome}">${st.simbolo}</span>
+      </span>
+      <span class="mm-node-texto">${esc(node.texto)}</span>
+      <span class="mm-node-barra" aria-hidden="true"><span style="width:${pct}%;"></span></span>
+      <span class="mm-node-rodape">
+        <span>${pct}%</span>
+        ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
+        ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
+      </span>
+      ${nFilhos && !central ? `<span class="mm-node-contador">${nFilhos}</span>` : ""}
+      ${atrasado ? `<span class="mm-node-flag" title="Prazo vencido">!</span>` : ""}`;
+  };
+  const rotulo = (node) => {
+    const t = mmTipo(node), st = mmStatus(node);
+    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
+    return `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${mmAvanco(node)} por cento.${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${mmAtrasado(node)?', vencido':''}.`:''}`;
+  };
+
+  let nodesHtml = `<button type="button" class="mm-node mm-center" style="left:50%;top:50%;background:${mmCorDe(foco, prefs)};" ${souDono?`onclick="mmAbrirEditor('${foco.id}','editar')"`:'disabled'} aria-label="Item central: ${rotulo(foco)}${souDono?' Clique para editar':''}">${bloco(foco, true)}</button>`;
 
   filhos.forEach((filho, i) => {
     const angulo = (360 / n) * i - 90;
     const rad = angulo * Math.PI / 180;
     const x = 50 + raio * Math.cos(rad);
     const y = 50 + raio * Math.sin(rad);
-    const t = mmTipo(filho);
-    const cor = prefs.contraste ? t.escuro : t.cor;
+    const cor = mmCorDe(filho, prefs);
     const dx = x - 50, dy = y - 50;
     const len = Math.sqrt(dx*dx + dy*dy) || 1;
     const nx = -dy/len, ny = dx/len;
     const bend = 6;
     const ctrlX = 50 + dx/2 + nx*bend;
     const ctrlY = 50 + dy/2 + ny*bend;
-    const nFilhos = (filho.filhos||[]).length;
 
     svgLinks += `<path d="M 50 50 Q ${ctrlX.toFixed(1)} ${ctrlY.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="${prefs.contraste?'1':'0.7'}" />`;
-
-    nodesHtml += `<button type="button" class="mm-node" style="left:${x}%;top:${y}%;background:${cor};" onclick="mindmapFocar('${filho.id}')" aria-label="${esc(filho.texto)}. Tipo ${t.nome}.${nFilhos?` ${nFilhos} sub-ideias.`:''} Abrir">
-      <span class="mm-simbolo mm-simbolo-sm" style="background:rgba(255,255,255,.3);" aria-hidden="true">${t.simbolo}</span>
-      <span>${esc(filho.texto)}</span>
-      ${nFilhos ? `<span class="mm-node-contador">${nFilhos}</span>` : ""}
-    </button>`;
+    nodesHtml += `<button type="button" class="mm-node" style="left:${x}%;top:${y}%;background:${cor};" onclick="mindmapFocar('${filho.id}')" aria-label="${rotulo(filho)} Abrir">${bloco(filho, false)}</button>`;
     if(!prefs.foco && filho.rotulo){
       nodesHtml += `<span class="mm-label" style="left:${ctrlX}%;top:${ctrlY}%;">${esc(filho.rotulo)}</span>`;
     }
@@ -3115,12 +3349,12 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
       <p class="muted-text" style="margin:0;">Clique numa bolha para entrar nela. ${souDono ? "A bolha central abre o editor." : "Você está vendo um mapa compartilhado."}</p>
-      ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('${foco.id}','novo')">+ Nova ideia aqui</button>` : ""}
+      ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('${foco.id}','novo')">+ Novo item aqui</button>` : ""}
     </div>
     <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
       ${nodesHtml}
-      ${!n ? `<p class="mm-vazio">Nenhuma ideia ligada ainda.${souDono?' Use "+ Nova ideia aqui".':''}</p>` : ""}
+      ${!n ? `<p class="mm-vazio">Nenhum item ligado ainda.${souDono?' Use "+ Novo item aqui".':''}</p>` : ""}
     </div>
     ${filhos.length ? `<div class="mm-ordenar">
       <span class="muted-text">Reordenar:</span>
@@ -3137,7 +3371,7 @@ function renderMindmapContent(cu){
   if(!STATE.mindmapDonoId) STATE.mindmapDonoId = cu.id;
   let row = getViewedMindmapRow(cu);
   if(!row){
-    return `<div class="card"><p class="empty-hint" style="margin-bottom:10px;">Você ainda não tem um mapa mental — crie o primeiro.</p>
+    return `<div class="card"><p class="empty-hint" style="margin-bottom:10px;">Você ainda não tem um mapa — crie o primeiro.</p>
       <button class="primary" onclick="ensureMindmapRow('${cu.id}').then(render)"><span style="margin-right:4px;">+</span>Criar meu mapa mental</button>
     </div>`;
   }
@@ -3166,16 +3400,17 @@ function renderMindmapContent(cu){
   }).join(`<span class="muted-text" aria-hidden="true">&#8250;</span>`);
 
   const progresso = `<div class="mm-progresso">
-    <span><strong>${stats.total}</strong> ideia${stats.total===1?'':'s'} no mapa</span>
+    <span><strong>${stats.total}</strong> ite${stats.total===1?'m':'ns'} no mapa</span>
     <span><strong>${stats.prof}</strong> nível${stats.prof===1?'':'is'} de profundidade</span>
     <span>Você está no nível <strong>${caminho.length}</strong> — ${esc(mmCamadaNome(caminho.length-1))}</span>
-    ${statsFoco.total > 1 ? `<span><strong>${statsFoco.total - 1}</strong> ideia(s) abaixo daqui</span>` : ""}
+    ${statsFoco.total > 1 ? `<span><strong>${statsFoco.total - 1}</strong> ite${statsFoco.total===2?'m':'ns'} abaixo daqui</span>` : ""}
   </div>`;
 
   return `${prefs.foco ? "" : seletor}
   <nav class="mm-trilha" aria-label="Caminho até a ideia atual">${breadcrumb}</nav>
   ${progresso}
   ${renderMindmapControles(prefs)}
+  ${prefs.foco ? "" : renderMindmapPainel(tree, prefs)}
   ${prefs.foco ? "" : `
   <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap;">
     <label class="sr-only" for="mindmap-busca-input">Buscar no mapa</label>
@@ -3190,7 +3425,7 @@ function renderMindmapContent(cu){
     </label>`).join("")}
   </div>` : ""}
   <div id="mindmap-search-results"></div>
-  ${renderMindmapLegenda()}`}
+  ${renderMindmapLegenda(prefs)}`}
   ${prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono) : renderMindmapRadial(cu, tree, foco, souDono, prefs)}`;
 }
 function renderEscalaContent(cu){
