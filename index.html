@@ -346,6 +346,21 @@
   .mm-roteiro-avanco .barra{height:7px;}
   .mm-roteiro-pct{font-size:11.5px;font-weight:800;min-width:34px;font-variant-numeric:tabular-nums;}
   .mm-apagado{opacity:.45;}
+  /* checklist no editor */
+  .mm-ck-editor{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
+  .mm-ck-linha-ed{display:flex;align-items:center;gap:8px;}
+  .mm-ck-linha-ed input[type="text"]{flex:1;min-width:0;padding:8px 10px;font-size:13.5px;}
+  .mm-ck-box{width:20px;height:20px;flex-shrink:0;accent-color:var(--ok);}
+  .mm-ck-linha-ed .small{flex-shrink:0;font-size:16px;line-height:1;padding:6px 10px;color:var(--text-2);}
+  /* checklist marcável no roteiro */
+  .mm-tag-ck{border:1px solid var(--border-strong);background:var(--surface);color:var(--text-2);box-shadow:none;cursor:pointer;}
+  .mm-tag-ck:hover{background:var(--surface-2);border-color:var(--text-3);}
+  .mm-tag-ck.completo{background:var(--ok-bg);color:var(--ok-text);border-color:#bfe0c8;}
+  .mm-ck-lista{list-style:none;margin:8px 0 0;padding:0 0 0 2px;display:flex;flex-direction:column;gap:2px;}
+  .mm-ck-item{display:flex;align-items:flex-start;gap:9px;padding:6px 8px;border-radius:var(--radius-sm);cursor:pointer;font-size:13px;line-height:1.4;min-height:32px;}
+  .mm-ck-item:hover{background:var(--surface-2);}
+  .mm-ck-item input{width:19px;height:19px;flex-shrink:0;margin-top:1px;accent-color:var(--ok);}
+  .mm-ck-item.feito span{text-decoration:line-through;color:var(--text-3);}
   .mm-node-contador{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;border-radius:11px;background:var(--surface);color:var(--text);border:1.5px solid currentColor;font-size:11px;font-weight:800;line-height:18px;padding:0 4px;}
   .mm-label{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border-strong);border-radius:6px;padding:3px 8px;font-size:.78em;font-weight:600;color:var(--text-2);z-index:2;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
   .mm-vazio{position:absolute;inset:auto 10% 18%;text-align:center;color:var(--text-2);font-size:13px;}
@@ -2800,13 +2815,51 @@ const MM_STATUS_PADRAO = "nao_iniciado";
 function mmStatus(node){ return MM_STATUS[node && node.status] || MM_STATUS[MM_STATUS_PADRAO]; }
 // Em item com sub-itens o avanço é calculado pelos filhos — não dá para dizer
 // que a etapa está 80% pronta se as partes dela não estão.
+function mmChecklist(node){ return (node && Array.isArray(node.checklist)) ? node.checklist : []; }
+function mmChecklistStats(node){
+  const lista = mmChecklist(node);
+  return { total: lista.length, feitos: lista.filter(i => i.feito).length };
+}
+// Ordem de prioridade do avanço: sub-itens > checklist > valor digitado.
+// Assim o percentual sempre sai de algo verificável quando existe algo verificável.
 function mmAvanco(node){
   const filhos = node.filhos || [];
-  if(!filhos.length){
-    if(node.status === "concluido") return 100;
-    return Math.max(0, Math.min(100, Number(node.avanco) || 0));
+  if(filhos.length) return Math.round(filhos.reduce((soma,f) => soma + mmAvanco(f), 0) / filhos.length);
+  if(node.status === "concluido") return 100;
+  const ck = mmChecklistStats(node);
+  if(ck.total) return Math.round((ck.feitos / ck.total) * 100);
+  return Math.max(0, Math.min(100, Number(node.avanco) || 0));
+}
+function mmOrigemAvanco(node){
+  if((node.filhos||[]).length) return "filhos";
+  if(mmChecklistStats(node).total) return "checklist";
+  return "manual";
+}
+// Marcar/desmarcar um passo direto na lista, sem abrir o editor.
+async function mmToggleCheck(nodeId, itemId){
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row) return;
+  const node = findMindmapNode(row.arvore, nodeId);
+  if(!node) return;
+  const item = mmChecklist(node).find(i => i.id === itemId);
+  if(!item) return;
+  item.feito = !item.feito;
+  const ck = mmChecklistStats(node);
+  if(ck.total && ck.feitos === ck.total && node.status !== "concluido" && node.status !== "parado"){
+    node.status = "concluido";
+  } else if(node.status === "concluido" && ck.feitos < ck.total){
+    node.status = "em_andamento";
+  } else if(node.status === "nao_iniciado" && ck.feitos > 0){
+    node.status = "em_andamento";
   }
-  return Math.round(filhos.reduce((soma,f) => soma + mmAvanco(f), 0) / filhos.length);
+  render();
+  await saveMindmapTree(row.id, node === row.arvore ? node : row.arvore);
+}
+function mmAlternarChecklist(nodeId){
+  STATE.mmChecklistAberto = STATE.mmChecklistAberto || {};
+  STATE.mmChecklistAberto[nodeId] = !STATE.mmChecklistAberto[nodeId];
+  render();
 }
 function mmTemFilhos(node){ return !!(node.filhos && node.filhos.length); }
 function mmAtrasado(node){
@@ -2944,8 +2997,41 @@ function mmGuardarRascunho(){
   const pega = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
   ed.rascunho = Object.assign({}, ed.rascunho, {
     texto: pega("mm-ed-texto"), rotulo: pega("mm-ed-rotulo"), link: pega("mm-ed-link"),
-    avanco: pega("mm-ed-avanco"), responsavel_id: pega("mm-ed-resp"), prazo: pega("mm-ed-prazo")
+    avanco: pega("mm-ed-avanco"), responsavel_id: pega("mm-ed-resp"), prazo: pega("mm-ed-prazo"),
+    checklist: mmLerChecklistDoEditor()
   });
+}
+// Lê o que está digitado no checklist agora. Sem isso, adicionar um passo
+// apagaria o texto dos anteriores ao re-renderizar o modal.
+function mmLerChecklistDoEditor(){
+  const cont = document.getElementById("mm-ck-editor");
+  if(!cont) return (STATE.mmEditor && STATE.mmEditor.rascunho) ? STATE.mmEditor.rascunho.checklist : undefined;
+  const linhas = cont.querySelectorAll(".mm-ck-linha-ed");
+  const lista = [];
+  for(let i = 0; i < linhas.length; i++){
+    const texto = document.getElementById("mm-ck-texto-" + i);
+    const feito = document.getElementById("mm-ck-feito-" + i);
+    lista.push({ id: uid(), texto: texto ? texto.value : "", feito: feito ? !!feito.checked : false });
+  }
+  return lista;
+}
+function mmAdicionarPasso(){
+  if(!STATE.mmEditor) return;
+  const atual = mmLerChecklistDoEditor() || [];
+  atual.push({ id: uid(), texto: "", feito: false });
+  STATE.mmEditor.rascunho = Object.assign({}, STATE.mmEditor.rascunho, { checklist: atual });
+  mmGuardarRascunho();
+  STATE.mmEditor.rascunho.checklist = atual;
+  render();
+  setTimeout(() => { const el = document.getElementById("mm-ck-texto-" + (atual.length-1)); if(el) el.focus(); }, 30);
+}
+function mmRemoverPasso(indice){
+  if(!STATE.mmEditor) return;
+  const atual = mmLerChecklistDoEditor() || [];
+  atual.splice(indice, 1);
+  mmGuardarRascunho();
+  STATE.mmEditor.rascunho.checklist = atual;
+  render();
 }
 function renderMindmapEditor(cu){
   const ed = STATE.mmEditor;
@@ -2961,7 +3047,10 @@ function renderMindmapEditor(cu){
   const statusAtivo = ed.status || alvo.status || MM_STATUS_PADRAO;
   const ehRaiz = node.id === "root" && !novo;
   const temFilhos = !novo && mmTemFilhos(node);
-  const avancoCalc = temFilhos ? mmAvanco(node) : 0;
+  const listaRascunho = ed.rascunho && ed.rascunho.checklist ? ed.rascunho.checklist : mmChecklist(alvo);
+  const ckStats = { total: listaRascunho.length, feitos: listaRascunho.filter(i => i.feito).length };
+  const temChecklist = !temFilhos && ckStats.total > 0;
+  const avancoCalc = temFilhos ? mmAvanco(node) : (ckStats.total ? Math.round((ckStats.feitos/ckStats.total)*100) : 0);
   const avancoProprio = Math.max(0, Math.min(100, Number(alvo.avanco) || 0));
   return `<div class="modal-overlay" onclick="if(event.target===this) mmFecharEditor()">
     <div class="modal" style="max-width:520px;" role="dialog" aria-modal="true" aria-labelledby="mm-ed-titulo">
@@ -2989,8 +3078,8 @@ function renderMindmapEditor(cu){
           </button>`; }).join("")}
       </div>
 
-      ${temFilhos ? `<div class="mm-aviso-calc">
-        <strong>${avancoCalc}% concluído</strong> — calculado a partir dos ${(node.filhos||[]).length} sub-itens. Para mudar, ajuste o avanço de cada um.
+      ${(temFilhos || temChecklist) ? `<div class="mm-aviso-calc">
+        <strong>${avancoCalc}% concluído</strong> — ${temFilhos ? `calculado a partir dos ${(node.filhos||[]).length} sub-itens. Para mudar, ajuste o avanço de cada um.` : `calculado pelo checklist: ${ckStats.feitos} de ${ckStats.total} passo${ckStats.total===1?'':'s'} marcado${ckStats.feitos===1?'':'s'}.`}
         <div class="barra" style="margin-top:7px;"><div class="barra-fill" style="width:${avancoCalc}%;background:${mmStatus({status:statusAtivo}).cor};"></div></div>
       </div>` : `
       <label class="field-label" for="mm-ed-avanco">Avanço: <span id="mm-ed-avanco-valor">${avancoProprio}%</span></label>
@@ -2998,6 +3087,18 @@ function renderMindmapEditor(cu){
              oninput="const v=document.getElementById('mm-ed-avanco-valor'); if(v) v.textContent=this.value+'%';"
              style="margin-bottom:14px;padding:0;" aria-describedby="mm-ed-avanco-dica" />
       <p class="muted-text" id="mm-ed-avanco-dica" style="margin:-8px 0 14px;">Marcar como "Concluído" leva para 100% automaticamente.</p>`}
+
+      <p class="field-label">Checklist de sub-atividades</p>
+      <div class="mm-ck-editor" id="mm-ck-editor">
+        ${(ed.rascunho && ed.rascunho.checklist ? ed.rascunho.checklist : mmChecklist(alvo)).map((it,i) => `
+          <div class="mm-ck-linha-ed">
+            <input type="checkbox" class="mm-ck-box" id="mm-ck-feito-${i}" ${it.feito?'checked':''} aria-label="Marcar ${esc(it.texto||('passo '+(i+1)))} como feito" />
+            <input type="text" id="mm-ck-texto-${i}" value="${esc(it.texto||"")}" placeholder="Passo ${i+1}" aria-label="Texto do passo ${i+1}" />
+            <button type="button" class="small ghost" onclick="mmRemoverPasso(${i})" aria-label="Remover passo ${i+1}">&times;</button>
+          </div>`).join("")}
+      </div>
+      <button type="button" class="small" style="margin-bottom:6px;" onclick="mmAdicionarPasso()">+ Adicionar passo</button>
+      <p class="muted-text" style="margin:0 0 16px;">Com checklist preenchido, o avanço do item passa a ser calculado pelos passos marcados.</p>
 
       <div class="mm-ed-dupla">
         <div>
@@ -3050,13 +3151,14 @@ async function mmSalvarEditor(){
   const prazo = campoPrazo ? (campoPrazo.value || null) : null;
   let avanco = campoAvanco ? Math.max(0, Math.min(100, Number(campoAvanco.value) || 0)) : null;
   if(status === "concluido") avanco = 100;
+  const checklist = (mmLerChecklistDoEditor() || []).filter(i => (i.texto||"").trim()).map(i => ({ id:i.id||uid(), texto:i.texto.trim(), feito:!!i.feito }));
   const tree = row.arvore;
   if(ed.modo === "novo"){
     const pai = findMindmapNode(tree, ed.nodeId);
     if(!pai) return;
     pai.filhos = pai.filhos || [];
     pai.filhos.push({ id: uid(), texto: texto, tipo: tipo, status: status, avanco: avanco || 0,
-      responsavel_id: responsavel_id, prazo: prazo, rotulo: rotulo, link: link, filhos: [] });
+      responsavel_id: responsavel_id, prazo: prazo, rotulo: rotulo, link: link, checklist: checklist, filhos: [] });
   } else {
     const node = findMindmapNode(tree, ed.nodeId);
     if(!node) return;
@@ -3066,6 +3168,7 @@ async function mmSalvarEditor(){
     if(avanco !== null) node.avanco = avanco;
     node.responsavel_id = responsavel_id;
     node.prazo = prazo;
+    node.checklist = checklist;
     if(campoRotulo) node.rotulo = rotulo;
     node.link = link;
   }
@@ -3244,6 +3347,8 @@ function renderMindmapRoteiro(cu, tree, souDono){
     const pct = mmAvanco(node);
     const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
     const atrasado = mmAtrasado(node);
+    const ck = mmChecklistStats(node);
+    const aberto = (STATE.mmChecklistAberto || {})[node.id];
     const combina = !filtro || (node.status||MM_STATUS_PADRAO) === filtro;
     return `<li class="mm-roteiro-item">
       <div class="mm-roteiro-linha ${combina?'':'mm-apagado'}" style="border-left:4px solid ${t.cor};">
@@ -3257,12 +3362,21 @@ function renderMindmapRoteiro(cu, tree, souDono){
             <span class="mm-tag" style="background:${st.claro};color:${st.escuro};">${st.nome}</span>
             ${resp ? `<span class="mm-tag mm-tag-neutra">${esc(resp.nome.split(" ")[0])}</span>` : ""}
             ${node.prazo ? `<span class="mm-tag ${atrasado?'mm-tag-atraso':'mm-tag-neutra'}">${atrasado?'Venceu ':'Prazo '}${fmtDate(node.prazo)}</span>` : ""}
+            ${ck.total ? `<button class="mm-tag mm-tag-ck ${ck.feitos===ck.total?'completo':''}" aria-expanded="${!!aberto}" onclick="mmAlternarChecklist('${node.id}')">${aberto?'&#9660;':'&#9654;'} Checklist ${ck.feitos}/${ck.total}</button>` : ""}
             ${node.rotulo ? `<span class="mm-tag mm-tag-neutra">ligação: ${esc(node.rotulo)}</span>` : ""}
           </span>
+          ${ck.total && aberto ? `<ul class="mm-ck-lista">
+            ${mmChecklist(node).map(it => `<li>
+              <label class="mm-ck-item ${it.feito?'feito':''}">
+                <input type="checkbox" ${it.feito?'checked':''} ${souDono?'':'disabled'} onchange="mmToggleCheck('${node.id}','${it.id}')" />
+                <span>${esc(it.texto)}</span>
+              </label>
+            </li>`).join("")}
+          </ul>` : ""}
           <span class="mm-roteiro-avanco">
             <span class="barra" style="flex:1;"><span class="barra-fill" style="display:block;height:100%;width:${pct}%;background:${st.cor};"></span></span>
             <span class="mm-roteiro-pct">${pct}%</span>
-            ${filhos.length ? `<span class="muted-text" style="font-size:11px;">calculado de ${filhos.length} sub-item${filhos.length===1?'':'s'}</span>` : ""}
+            ${filhos.length ? `<span class="muted-text" style="font-size:11px;">calculado de ${filhos.length} sub-${filhos.length===1?'item':'itens'}</span>` : (ck.total ? `<span class="muted-text" style="font-size:11px;">pelo checklist</span>` : "")}
           </span>
         </span>
         <span class="mm-roteiro-acoes">
@@ -3301,6 +3415,7 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
     const pct = mmAvanco(node);
     const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
     const atrasado = mmAtrasado(node);
+    const ck = mmChecklistStats(node);
     const nFilhos = (node.filhos||[]).length;
     return `
       <span class="mm-faixa" style="background:${faixa};" aria-hidden="true"></span>
@@ -3312,6 +3427,7 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
       <span class="mm-node-barra" aria-hidden="true"><span style="width:${pct}%;"></span></span>
       <span class="mm-node-rodape">
         <span>${pct}%</span>
+        ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
         ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
         ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
       </span>
@@ -3321,7 +3437,8 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
   const rotulo = (node) => {
     const t = mmTipo(node), st = mmStatus(node);
     const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
-    return `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${mmAvanco(node)} por cento.${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${mmAtrasado(node)?', vencido':''}.`:''}`;
+    const ckr = mmChecklistStats(node);
+    return `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${mmAvanco(node)} por cento.${ckr.total?` Checklist ${ckr.feitos} de ${ckr.total}.`:''}${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${mmAtrasado(node)?', vencido':''}.`:''}`;
   };
 
   let nodesHtml = `<button type="button" class="mm-node mm-center" style="left:50%;top:50%;background:${mmCorDe(foco, prefs)};" ${souDono?`onclick="mmAbrirEditor('${foco.id}','editar')"`:'disabled'} aria-label="Item central: ${rotulo(foco)}${souDono?' Clique para editar':''}">${bloco(foco, true)}</button>`;
