@@ -365,6 +365,15 @@
   .mm-arv-toggle{position:absolute;right:-15px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:2px;min-width:30px;height:26px;padding:0 6px;border-radius:13px;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text-2);font-size:14px;font-weight:800;line-height:1;box-shadow:var(--shadow-sm);z-index:3;}
   .mm-arv-toggle:hover{background:var(--surface-2);border-color:var(--text-3);color:var(--text);}
   .mm-arv-toggle-n{font-size:10.5px;font-weight:700;}
+  .mm-arv-alca{position:absolute;left:-3px;top:50%;transform:translateY(-50%);z-index:4;cursor:grab;color:rgba(255,255,255,.85);font-size:11px;letter-spacing:-3px;padding:7px 3px;line-height:1;border-radius:4px;}
+  .mm-arv-alca:active{cursor:grabbing;}
+  .mm-arv-no:hover .mm-arv-alca{background:rgba(0,0,0,.18);}
+  .mm-arv-no.mm-arrastado{opacity:.4;}
+  .mm-arv-no.mm-alvo-drop{outline:3px dashed var(--accent);outline-offset:3px;border-radius:12px;}
+  .mm-arv-tarefa{font-size:1.1em;line-height:1;}
+  .mm-tag-tarefa{background:var(--accent-bg);color:var(--accent-text);}
+  .mm-vinculo{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 12px;background:var(--accent-bg);border-radius:var(--radius-sm);margin-bottom:12px;}
+  .mm-vinculo-quebrado{background:var(--danger-bg);color:var(--danger-text);font-size:12.5px;}
   @media(max-width:760px){.mm-pan{max-height:460px;}}
   /* checklist no editor */
   .mm-ck-editor{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
@@ -2837,7 +2846,11 @@ const MM_STATUS_PADRAO = "nao_iniciado";
 // Sem isso o pai pode ficar "Não iniciado" mostrando 77% de avanço.
 function mmStatusEfetivo(node){
   const filhos = (node && node.filhos) || [];
-  if(!filhos.length) return (node && node.status) || MM_STATUS_PADRAO;
+  if(!filhos.length){
+    const tarefa = mmTarefaDe(node);
+    if(tarefa) return MM_STATUS_DA_TAREFA[tarefa.status] || MM_STATUS_PADRAO;
+    return (node && node.status) || MM_STATUS_PADRAO;
+  }
   const sts = filhos.map(mmStatusEfetivo);
   if(sts.indexOf("parado") !== -1) return "parado";
   if(sts.every(x => x === "concluido")) return "concluido";
@@ -2858,16 +2871,28 @@ function mmChecklistStats(node){
 function mmAvanco(node){
   const filhos = node.filhos || [];
   if(filhos.length) return Math.round(filhos.reduce((soma,f) => soma + mmAvanco(f), 0) / filhos.length);
-  if(node.status === "concluido") return 100;
+  if(mmStatusEfetivo(node) === "concluido") return 100;
   const ck = mmChecklistStats(node);
   if(ck.total) return Math.round((ck.feitos / ck.total) * 100);
   return Math.max(0, Math.min(100, Number(node.avanco) || 0));
 }
 function mmOrigemAvanco(node){
   if((node.filhos||[]).length) return "filhos";
+  if(mmTarefaDe(node)) return "tarefa";
   if(mmChecklistStats(node).total) return "checklist";
   return "manual";
 }
+// Vínculo com a tarefa: quando existe, quem manda no item é a tarefa.
+// Sem isso o mapa e o quadro de tarefas contam histórias diferentes.
+function mmTarefaDe(node){
+  if(!node || !node.tarefa_id) return null;
+  return DB.tarefas.find(t => t.id === node.tarefa_id) || null;
+}
+const MM_STATUS_DA_TAREFA = {
+  a_fazer:"nao_iniciado", em_andamento:"em_andamento", impedida:"parado",
+  concluida:"concluido", cancelada:"parado", recusada:"parado",
+  pendente_aprovacao:"revisao", aguardando_reatribuicao:"parado"
+};
 // Marcar/desmarcar um passo direto na lista, sem abrir o editor.
 async function mmToggleCheck(nodeId, itemId){
   const cu = currentUser();
@@ -3120,8 +3145,12 @@ function renderMindmapEditor(cu){
   const listaRascunho = ed.rascunho && ed.rascunho.checklist ? ed.rascunho.checklist : mmChecklist(alvo);
   const ckStats = { total: listaRascunho.length, feitos: listaRascunho.filter(i => i.feito).length };
   const temChecklist = !temFilhos && ckStats.total > 0;
-  const avancoCalc = temFilhos ? mmAvanco(node) : (ckStats.total ? Math.round((ckStats.feitos/ckStats.total)*100) : 0);
+  const avancoCalc = (!novo && (temFilhos || mmTarefaDe(node))) ? mmAvanco(node) : (ckStats.total ? Math.round((ckStats.feitos/ckStats.total)*100) : 0);
   const avancoProprio = Math.max(0, Math.min(100, Number(alvo.avanco) || 0));
+  const tarefaVinc = novo ? null : mmTarefaDe(node);
+  const paiAtual = novo ? null : findMindmapParent(row.arvore, node.id);
+  const paiAtualId = paiAtual ? paiAtual.id : null;
+  const paisPossiveis = novo ? [] : mmPaisPossiveis(row.arvore, node.id);
   return `<div class="modal-overlay" onclick="if(event.target===this) mmFecharEditor()">
     <div class="modal" style="max-width:520px;" role="dialog" aria-modal="true" aria-labelledby="mm-ed-titulo">
       <h2 id="mm-ed-titulo" style="margin-bottom:4px;">${novo ? "Novo item" : "Editar item"}</h2>
@@ -3148,8 +3177,10 @@ function renderMindmapEditor(cu){
           </button>`; }).join("")}
       </div>
 
-      ${(temFilhos || temChecklist) ? `<div class="mm-aviso-calc">
-        <strong>${avancoCalc}% concluído</strong> — ${temFilhos ? `calculado a partir dos ${(node.filhos||[]).length} sub-itens. Para mudar, ajuste o avanço de cada um.` : `calculado pelo checklist: ${ckStats.feitos} de ${ckStats.total} passo${ckStats.total===1?'':'s'} marcado${ckStats.feitos===1?'':'s'}.`}
+      ${(temFilhos || temChecklist || tarefaVinc) ? `<div class="mm-aviso-calc">
+        <strong>${avancoCalc}% concluído</strong> — ${temFilhos ? `calculado a partir dos ${(node.filhos||[]).length} sub-itens. Para mudar, ajuste o avanço de cada um.`
+          : tarefaVinc ? `vem da tarefa vinculada, que está como "${esc(statusLabel(tarefaVinc.status))}".`
+          : `calculado pelo checklist: ${ckStats.feitos} de ${ckStats.total} passo${ckStats.total===1?'':'s'} marcado${ckStats.feitos===1?'':'s'}.`}
         <div class="barra" style="margin-top:7px;"><div class="barra-fill" style="width:${avancoCalc}%;background:${mmStatus({status:statusAtivo}).cor};"></div></div>
       </div>` : `
       <label class="field-label" for="mm-ed-avanco">Avanço: <span id="mm-ed-avanco-valor">${avancoProprio}%</span></label>
@@ -3157,6 +3188,31 @@ function renderMindmapEditor(cu){
              oninput="const v=document.getElementById('mm-ed-avanco-valor'); if(v) v.textContent=this.value+'%';"
              style="margin-bottom:14px;padding:0;" aria-describedby="mm-ed-avanco-dica" />
       <p class="muted-text" id="mm-ed-avanco-dica" style="margin:-8px 0 14px;">Marcar como "Concluído" leva para 100% automaticamente.</p>`}
+
+      <p class="field-label">Tarefa vinculada</p>
+      ${tarefaVinc ? `<div class="mm-vinculo">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:700;font-size:13px;">${esc(tarefaVinc.titulo)}</div>
+          <div class="muted-text">${esc(statusLabel(tarefaVinc.status))} · prazo ${fmtDate(tarefaVinc.prazo)} · ${esc((getUser(tarefaVinc.atribuido_a)||{}).nome || "sem responsável")}</div>
+        </div>
+        <button type="button" class="small" onclick="mmFecharEditor();openTask('${tarefaVinc.id}')">Abrir</button>
+        <button type="button" class="small ghost" onclick="mmVincularTarefa('${node.id}','')">Desvincular</button>
+      </div>
+      <p class="muted-text" style="margin:-6px 0 16px;">Enquanto houver vínculo, o avanço e a situação deste item vêm da tarefa.</p>`
+      : (alvo.tarefa_id ? `<div class="mm-vinculo mm-vinculo-quebrado">
+        <span style="flex:1;">Havia uma tarefa vinculada, mas ela não está mais disponível (apagada, ou fora do seu acesso).</span>
+        <button type="button" class="small ghost" onclick="mmVincularTarefa('${node.id}','')">Limpar vínculo</button>
+      </div>`
+      : `<select onchange="if(this.value) mmVincularTarefa('${node.id}', this.value)" style="margin-bottom:6px;">
+          <option value="">Sem tarefa vinculada</option>
+          ${DB.tarefas.filter(t => t.status !== "cancelada").slice(0,200).map(t => `<option value="${t.id}">${esc(t.titulo)} — ${esc(statusLabel(t.status))}</option>`).join("")}
+        </select>
+        <p class="muted-text" style="margin:0 0 16px;">Ou use "Virar tarefa" na lista para criar uma já vinculada, com o responsável e o prazo deste item.</p>`)}
+
+      ${(!novo && !ehRaiz) ? `<label class="field-label" for="mm-ed-pai">Mover para dentro de</label>
+      <select id="mm-ed-pai" onchange="mmMoverPara('${node.id}', this.value)" style="margin-bottom:16px;">
+        ${paisPossiveis.map(op => `<option value="${op.id}" ${op.id===paiAtualId?'selected':''}>${"— ".repeat(op.prof)}${esc(op.texto)}${op.id===paiAtualId?' (atual)':''}</option>`).join("")}
+      </select>` : ""}
 
       <p class="field-label">Checklist de sub-atividades</p>
       <div class="mm-ck-editor" id="mm-ck-editor">
@@ -3239,6 +3295,7 @@ async function mmSalvarEditor(){
     node.responsavel_id = responsavel_id;
     node.prazo = prazo;
     node.checklist = checklist;
+    if(ed.rascunho && "tarefa_id" in ed.rascunho) node.tarefa_id = ed.rascunho.tarefa_id || null;
     if(campoRotulo) node.rotulo = rotulo;
     node.link = link;
   }
@@ -3274,19 +3331,120 @@ async function mindmapMoveNode(userId, nodeId, direcao){
   await saveMindmapTree(row.id, tree);
 }
 async function mindmapVirarTarefa(userId, nodeId){
-  const row = getViewedMindmapRow(currentUser());
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
   if(!row) return;
   const node = findMindmapNode(row.arvore, nodeId);
   if(!node) return;
-  const cu = currentUser();
+  if(node.tarefa_id){
+    const jaTem = mmTarefaDe(node);
+    if(jaTem){ openTask(jaTem.id); return; }
+  }
   const tema = DB.temas[0];
   if(!tema){ toast("Cadastre um tema antes de transformar em tarefa."); return; }
-  const prazo = new Date(); prazo.setDate(prazo.getDate()+7);
-  const ok = await mutate(sb.from("tarefas").insert({
-    titulo: node.texto, tema_id: tema.id, prioridade:"Média", prazo: prazo.toISOString().slice(0,10),
-    status:"a_fazer", origem:"liderado", criado_por: cu.id, atribuido_a: cu.id
-  }));
-  if(ok) toast(`Tarefa "${node.texto}" criada — ajuste tema e prazo em "Minhas tarefas".`);
+  let prazo = node.prazo;
+  if(!prazo){ const d = new Date(); d.setDate(d.getDate()+7); prazo = d.toISOString().slice(0,10); }
+  const dono = node.responsavel_id || cu.id;
+  const { data, error } = await sb.from("tarefas").insert({
+    titulo: node.texto, tema_id: tema.id, prioridade:"Média", prazo: prazo,
+    status:"a_fazer", origem: dono === cu.id ? "liderado" : "lider",
+    criado_por: cu.id, atribuido_a: dono
+  }).select().single();
+  if(error){ toast("Erro ao criar tarefa: " + error.message); return; }
+  DB.tarefas.push(data);
+  node.tarefa_id = data.id;
+  if(dono !== cu.id) addNotif(dono, "tarefa_atribuida", `${cu.nome} atribuiu a tarefa "${node.texto}" a você`, data.id);
+  render();
+  await saveMindmapTree(row.id, row.arvore);
+  toast(`Tarefa criada e vinculada ao item. O avanço agora vem dela.`);
+  lastManualLoadAt = Date.now();
+  loadAll();
+}
+async function mmVincularTarefa(nodeId, tarefaId){
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row) return;
+  const node = findMindmapNode(row.arvore, nodeId);
+  if(!node) return;
+  node.tarefa_id = tarefaId || null;
+  if(STATE.mmEditor && STATE.mmEditor.nodeId === nodeId){
+    STATE.mmEditor.rascunho = Object.assign({}, STATE.mmEditor.rascunho, { tarefa_id: node.tarefa_id });
+  }
+  render();
+  await saveMindmapTree(row.id, row.arvore);
+  toast(tarefaId ? "Tarefa vinculada ao item." : "Vínculo removido.");
+}
+// Mover item de ramo. A única regra: ninguém pode virar filho do próprio
+// descendente, senão a árvore vira um laço e o cálculo de avanço roda para sempre.
+function mmPodeSerPai(tree, nodeId, novoPaiId){
+  if(!novoPaiId || nodeId === novoPaiId || nodeId === "root") return false;
+  const node = findMindmapNode(tree, nodeId);
+  if(!node) return false;
+  if(findMindmapNode(node, novoPaiId)) return false;
+  return !!findMindmapNode(tree, novoPaiId);
+}
+function mmPaisPossiveis(tree, nodeId){
+  const lista = [];
+  (function anda(n, prof){
+    if(n.id === nodeId) return;
+    if(mmPodeSerPai(tree, nodeId, n.id)) lista.push({ id:n.id, texto:n.texto, prof:prof });
+    (n.filhos||[]).forEach(f => anda(f, prof+1));
+  })(tree, 0);
+  return lista;
+}
+async function mmMoverPara(nodeId, novoPaiId){
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row) return;
+  const tree = row.arvore;
+  const paiAtual = findMindmapParent(tree, nodeId);
+  if(paiAtual && paiAtual.id === novoPaiId) return;
+  if(!mmPodeSerPai(tree, nodeId, novoPaiId)){
+    toast("Não dá: um item não pode entrar dentro de si mesmo nem de um sub-item dele.");
+    render();
+    return;
+  }
+  const node = findMindmapNode(tree, nodeId);
+  const novoPai = findMindmapNode(tree, novoPaiId);
+  if(!node || !novoPai) return;
+  if(paiAtual) paiAtual.filhos = (paiAtual.filhos||[]).filter(f => f.id !== nodeId);
+  novoPai.filhos = novoPai.filhos || [];
+  novoPai.filhos.push(node);
+  if(STATE.mmRecolhidos) delete STATE.mmRecolhidos[novoPaiId];
+  render();
+  await saveMindmapTree(row.id, tree);
+  toast(`"${node.texto}" agora está dentro de "${novoPai.texto}".`);
+}
+// Arrastar bloco na árvore. Só a alça arrasta — o resto do bloco continua
+// servindo para abrir, e o fundo continua servindo para navegar.
+let mmDragItem = null;
+function mmDragInicio(ev, id){
+  mmDragItem = id;
+  try{ ev.dataTransfer.effectAllowed = "move"; ev.dataTransfer.setData("text/plain", id); }catch(e){}
+  const bloco = ev.currentTarget.closest(".mm-arv-no");
+  if(bloco) bloco.classList.add("mm-arrastado");
+}
+function mmDragFim(ev){
+  mmDragItem = null;
+  const marcados = document.querySelectorAll(".mm-arrastado,.mm-alvo-drop");
+  for(let i=0;i<marcados.length;i++) marcados[i].classList.remove("mm-arrastado","mm-alvo-drop");
+}
+function mmDragSobre(ev, id){
+  if(!mmDragItem || mmDragItem === id) return;
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row || !mmPodeSerPai(row.arvore, mmDragItem, id)) return;
+  ev.preventDefault();
+  try{ ev.dataTransfer.dropEffect = "move"; }catch(e){}
+  ev.currentTarget.classList.add("mm-alvo-drop");
+}
+function mmDragSai(ev){ ev.currentTarget.classList.remove("mm-alvo-drop"); }
+function mmSoltarEm(ev, novoPaiId){
+  ev.preventDefault();
+  ev.currentTarget.classList.remove("mm-alvo-drop");
+  const id = mmDragItem;
+  mmDragFim(ev);
+  if(id) mmMoverPara(id, novoPaiId);
 }
 function mindmapFocar(nodeId){ STATE.mindmapFocoId = nodeId; STATE.mindmapBusca = ""; render(); }
 function mmAlternarRamo(nodeId){
@@ -3419,6 +3577,7 @@ function renderMindmapRoteiro(cu, tree, souDono){
     const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
     const atrasado = mmAtrasado(node);
     const ck = mmChecklistStats(node);
+    const tarefaLig = mmTarefaDe(node);
     const aberto = (STATE.mmChecklistAberto || {})[node.id];
     const combina = !filtro || mmStatusEfetivo(node) === filtro;
     return `<li class="mm-roteiro-item">
@@ -3433,6 +3592,8 @@ function renderMindmapRoteiro(cu, tree, souDono){
             <span class="mm-tag" style="background:${st.claro};color:${st.escuro};">${st.nome}</span>
             ${resp ? `<span class="mm-tag mm-tag-neutra">${esc(resp.nome.split(" ")[0])}</span>` : ""}
             ${node.prazo ? `<span class="mm-tag ${atrasado?'mm-tag-atraso':'mm-tag-neutra'}">${atrasado?'Venceu ':'Prazo '}${fmtDate(node.prazo)}</span>` : ""}
+            ${tarefaLig ? `<span class="mm-tag mm-tag-tarefa">&#9873; Tarefa: ${esc(statusLabel(tarefaLig.status))}</span>` : ""}
+            ${node.tarefa_id && !tarefaLig ? `<span class="mm-tag mm-tag-atraso">Vínculo quebrado</span>` : ""}
             ${ck.total ? `<button class="mm-tag mm-tag-ck ${ck.feitos===ck.total?'completo':''}" aria-expanded="${!!aberto}" onclick="mmAlternarChecklist('${node.id}')">${aberto?'&#9660;':'&#9654;'} Checklist ${ck.feitos}/${ck.total}</button>` : ""}
             ${node.rotulo ? `<span class="mm-tag mm-tag-neutra">ligação: ${esc(node.rotulo)}</span>` : ""}
           </span>
@@ -3455,7 +3616,7 @@ function renderMindmapRoteiro(cu, tree, souDono){
           <button class="small ghost" onclick="mindmapFocar('${node.id}')" aria-label="Ver ${esc(node.texto)} no radial">Radial</button>
           ${souDono ? `<button class="small ghost" onclick="mmAbrirEditor('${node.id}','novo')" aria-label="Adicionar item dentro de ${esc(node.texto)}">+ Item</button>
           <button class="small ghost" onclick="mmAbrirEditor('${node.id}','editar')" aria-label="Editar ${esc(node.texto)}">Editar</button>` : ""}
-          <button class="small ghost" onclick="mindmapVirarTarefa('${cu.id}','${node.id}')" aria-label="Transformar ${esc(node.texto)} em tarefa">Virar tarefa</button>
+          <button class="small ghost" onclick="mindmapVirarTarefa('${cu.id}','${node.id}')" aria-label="${tarefaLig ? 'Abrir a tarefa de ' + esc(node.texto) : 'Transformar ' + esc(node.texto) + ' em tarefa'}">${tarefaLig ? "Abrir tarefa" : "Virar tarefa"}</button>
         </span>
       </div>
       ${filhos.length && !fechado ? `<ol class="mm-roteiro-lista">${filhos.map((f,i) => linha(f, prof+1, numero + "." + (i+1))).join("")}</ol>` : ""}
@@ -3519,7 +3680,10 @@ function renderMindmapArvore(cu, tree, souDono, prefs){
     const ck = mmChecklistStats(node);
     const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
     const atrasado = mmAtrasado(node);
-    return `<div class="mm-arv-no" ${r.prof===0?'data-raiz="1"':''} style="left:${r.x}px;top:${r.y}px;width:${L.LARG}px;height:${L.ALT}px;border-left-color:${t.cor};">
+    const tarefa = mmTarefaDe(node);
+    return `<div class="mm-arv-no" ${r.prof===0?'data-raiz="1"':''} style="left:${r.x}px;top:${r.y}px;width:${L.LARG}px;height:${L.ALT}px;border-left-color:${t.cor};"
+      ${souDono ? `ondragover="mmDragSobre(event,'${node.id}')" ondragleave="mmDragSai(event)" ondrop="mmSoltarEm(event,'${node.id}')"` : ""}>
+      ${souDono && r.prof>0 ? `<span class="mm-arv-alca" draggable="true" ondragstart="mmDragInicio(event,'${node.id}')" ondragend="mmDragFim(event)" title="Arraste para mover este item para dentro de outro" aria-hidden="true">&#8942;&#8942;</span>` : ""}
       <button type="button" class="mm-arv-abrir" style="background:${mmCorDe(node, prefs)};"
         onclick="${souDono ? `mmAbrirEditor('${node.id}','editar')` : `mindmapFocar('${node.id}')`}"
         aria-label="${esc(node.texto)}. ${t.nome}. ${st.nome}, ${pct} por cento.${ck.total?` Checklist ${ck.feitos} de ${ck.total}.`:''}${souDono?' Editar':''}">
@@ -3531,6 +3695,7 @@ function renderMindmapArvore(cu, tree, souDono, prefs){
         <span class="mm-arv-barra"><span style="width:${pct}%;"></span></span>
         <span class="mm-arv-rodape">
           <span>${pct}%</span>
+          ${tarefa ? `<span class="mm-arv-tarefa" title="Avanço vem da tarefa vinculada">&#9873;</span>` : ""}
           ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
           ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
           ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
@@ -3544,7 +3709,7 @@ function renderMindmapArvore(cu, tree, souDono, prefs){
 
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <p class="muted-text" style="margin:0;">Arraste para navegar. Use <strong>+</strong> e <strong>&minus;</strong> para abrir e fechar cada ramo.${souDono ? " Clique num bloco para editar." : ""}</p>
+      <p class="muted-text" style="margin:0;">Arraste o fundo para navegar. Use <strong>+</strong> e <strong>&minus;</strong> para abrir e fechar cada ramo.${souDono ? " Clique num bloco para editar, ou arraste pela alça (&#8942;&#8942;) para movê-lo de ramo." : ""}</p>
       <div class="row" style="gap:6px;">
         <button class="small ghost" onclick="STATE.mmRecolhidos={};render()">Expandir tudo</button>
         <button class="small ghost" onclick="mmRecolherTudo()">Recolher tudo</button>
