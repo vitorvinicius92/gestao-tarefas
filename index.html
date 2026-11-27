@@ -65,7 +65,7 @@
   input::placeholder,textarea::placeholder{color:var(--text-3);}
   input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-bg);}
   textarea{resize:vertical;}
-  label.field-label{font-size:11.5px;color:var(--text-2);display:block;margin:0 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
+  .field-label{font-size:11.5px;color:var(--text-2);display:block;margin:0 0 6px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;}
   .card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-lg);padding:18px 20px;box-shadow:var(--shadow-sm);}
   .badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 9px;border-radius:6px;white-space:nowrap;letter-spacing:.01em;}
   .badge.ok{background:var(--ok-bg);color:var(--ok-text);}
@@ -307,14 +307,65 @@
   .org-card.has-children::after{content:'';position:absolute;bottom:-6px;left:50%;transform:translateX(-50%);width:8px;height:8px;border-radius:50%;background:var(--border-strong);}
 
   /* mapa mental radial */
-  .mm-canvas{position:relative;width:100%;height:440px;border-radius:16px;overflow:hidden;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:22px 22px;}
-  .mm-node{position:absolute;transform:translate(-50%,-50%);border-radius:999px;padding:11px 16px;font-size:12px;font-weight:800;text-align:center;color:#fff;cursor:pointer;box-shadow:0 4px 10px rgba(0,0,0,.18);max-width:120px;transition:transform .15s;z-index:2;line-height:1.2;}
-  .mm-node:hover{transform:translate(-50%,-50%) scale(1.06);}
-  .mm-node.mm-center{background:var(--steel-900);font-size:14px;padding:16px 22px;max-width:150px;z-index:3;}
-  .mm-node-actions{display:flex;gap:4px;justify-content:center;margin-top:5px;}
-  .mm-node-actions button{width:20px;height:20px;padding:0;font-size:14px;font-weight:800;line-height:1;border-radius:50%;border:none;background:rgba(255,255,255,.35);color:#fff;box-shadow:none;}
-  .mm-node-actions button:hover{background:rgba(255,255,255,.55);}
-  .mm-label{position:absolute;transform:translate(-50%,-50%);background:#fff;border:1px solid var(--border-strong);border-radius:6px;padding:2px 7px;font-size:10px;font-weight:700;color:var(--text-2);cursor:pointer;z-index:2;white-space:nowrap;}
+  .mm-canvas{position:relative;width:100%;height:480px;border-radius:16px;overflow:hidden;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:22px 22px;}
+  .mm-node{position:absolute;transform:translate(-50%,-50%);border:none;border-radius:16px;padding:12px 15px;font-size:1em;font-weight:600;text-align:center;color:#fff;cursor:pointer;box-shadow:0 3px 10px rgba(16,24,40,.2);max-width:150px;min-width:74px;min-height:48px;transition:transform var(--t),box-shadow var(--t);z-index:2;line-height:1.3;display:flex;flex-direction:column;align-items:center;gap:5px;}
+  .mm-node:hover{transform:translate(-50%,-50%) scale(1.04);box-shadow:0 6px 16px rgba(16,24,40,.26);background-image:linear-gradient(rgba(0,0,0,.12),rgba(0,0,0,.12));}
+  .mm-node:focus-visible{outline:3px solid var(--text);outline-offset:3px;}
+  .mm-node.mm-center{font-size:1.1em;padding:16px 20px;max-width:180px;z-index:3;}
+  .mm-node[disabled]{opacity:1;cursor:default;}
+  .mm-node-contador{position:absolute;top:-7px;right:-7px;min-width:21px;height:21px;border-radius:11px;background:var(--surface);color:var(--text);border:1.5px solid currentColor;font-size:11px;font-weight:800;line-height:18px;padding:0 4px;}
+  .mm-label{position:absolute;transform:translate(-50%,-50%);background:var(--surface);border:1px solid var(--border-strong);border-radius:6px;padding:3px 8px;font-size:.78em;font-weight:600;color:var(--text-2);z-index:2;white-space:nowrap;max-width:130px;overflow:hidden;text-overflow:ellipsis;}
+  .mm-vazio{position:absolute;inset:auto 10% 18%;text-align:center;color:var(--text-2);font-size:13px;}
+  .mm-canvas.mm-contraste{background-image:none;background-color:#fff;}
+  .mm-canvas.mm-contraste .mm-node{box-shadow:none;border:2px solid #fff;outline:2px solid #000;}
+  /* símbolo do tipo — a cor nunca anda sozinha */
+  .mm-simbolo{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:7px;color:#fff;font-weight:800;font-size:13px;flex-shrink:0;}
+  .mm-simbolo-sm{width:20px;height:20px;border-radius:6px;font-size:11px;}
+  /* legenda */
+  .mm-legenda{display:grid;grid-template-columns:repeat(auto-fit,minmax(215px,1fr));gap:10px;}
+  .mm-legenda-item{display:flex;align-items:flex-start;gap:9px;font-size:13px;}
+  /* escolha de tipo no editor */
+  .mm-tipo-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:7px;}
+  .mm-tipo-opcao{display:flex;align-items:center;gap:9px;text-align:left;padding:9px 11px;background:var(--surface);border:1.5px solid var(--border);border-radius:var(--radius-sm);box-shadow:none;font-weight:500;}
+  .mm-tipo-opcao:hover{background:var(--surface-2);border-color:var(--border-strong);}
+  .mm-tipo-opcao.ativo{border-color:var(--accent);background:var(--accent-bg);}
+  .mm-tipo-texto{display:flex;flex-direction:column;min-width:0;}
+  .mm-tipo-texto strong{font-size:13px;}
+  .mm-tipo-texto span{font-size:11.5px;color:var(--text-2);}
+  /* controles de leitura */
+  .mm-controles{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px;padding:12px 14px;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);margin-bottom:12px;}
+  .mm-ctrl-grupo{display:flex;align-items:center;gap:6px;}
+  .mm-ctrl-rotulo{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--text-2);}
+  .mm-ctrl-valor{font-size:12.5px;font-weight:700;min-width:42px;text-align:center;font-variant-numeric:tabular-nums;}
+  /* trilha e progresso */
+  .mm-trilha{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-bottom:10px;}
+  .mm-trilha-item{display:inline-flex;align-items:center;gap:6px;background:none;border:none;box-shadow:none;padding:5px 8px;border-radius:var(--radius-sm);font-size:13px;font-weight:600;color:var(--text-2);}
+  .mm-trilha-item:hover{background:var(--surface-2);color:var(--text);border-color:transparent;}
+  .mm-trilha-item.atual{color:var(--text);background:var(--surface-2);}
+  .mm-progresso{display:flex;flex-wrap:wrap;gap:6px 18px;padding:10px 14px;background:var(--accent-bg);border-radius:var(--radius);margin-bottom:12px;font-size:12.5px;color:var(--accent-text);}
+  /* reordenar */
+  .mm-ordenar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);font-size:12.5px;}
+  .mm-ordenar-item{display:inline-flex;align-items:center;gap:3px;background:var(--surface-2);border-radius:var(--radius-sm);padding:3px 4px 3px 10px;}
+  .mm-ordenar-item > span{max-width:150px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  /* roteiro (alternativa acessível e sequencial ao radial) */
+  .mm-roteiro-lista{list-style:none;margin:0;padding:0;}
+  .mm-roteiro-raiz{font-size:1em;max-width:860px;}
+  .mm-roteiro-item{margin:0;}
+  .mm-roteiro-item > .mm-roteiro-lista{margin-left:14px;padding-left:12px;border-left:2px solid var(--border);}
+  .mm-roteiro-linha{display:flex;align-items:flex-start;gap:9px;padding:9px 6px;border-radius:var(--radius-sm);flex-wrap:wrap;}
+  .mm-roteiro-linha:hover{background:var(--surface-2);}
+  .mm-roteiro-toggle{width:28px;height:28px;padding:0;flex-shrink:0;background:var(--surface-2);border:1px solid var(--border);box-shadow:none;border-radius:var(--radius-sm);font-size:11px;color:var(--text-2);}
+  .mm-roteiro-toggle-vazio{width:28px;flex-shrink:0;}
+  .mm-roteiro-texto{display:flex;flex-direction:column;gap:2px;flex:1;min-width:140px;}
+  .mm-roteiro-texto strong{font-size:1em;line-height:1.4;font-weight:600;}
+  .mm-roteiro-numero{font-family:var(--mono);font-size:.8em;color:var(--text-3);}
+  .mm-roteiro-meta{font-size:.82em;color:var(--text-2);}
+  .mm-roteiro-acoes{display:flex;align-items:center;gap:4px;flex-wrap:wrap;}
+  .mm-roteiro-acoes .small{font-size:11.5px;padding:5px 9px;}
+  @media(max-width:600px){
+    .mm-roteiro-item > .mm-roteiro-lista{margin-left:6px;padding-left:8px;}
+    .mm-roteiro-acoes{width:100%;padding-left:37px;}
+  }
   .team-legend{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
   .team-chip{display:flex;align-items:center;gap:6px;background:var(--surface);border:1.5px solid var(--border-strong);border-radius:20px;padding:5px 12px 5px 8px;font-size:12px;font-weight:700;cursor:pointer;transition:border-color .12s,background .12s;}
   .team-chip:hover{border-color:var(--accent);}
@@ -832,6 +883,7 @@ function render(){
 
   if(STATE.openTaskId){ document.body.insertAdjacentHTML("beforeend", renderTaskModal()); }
   if(STATE.avisarWa){ document.body.insertAdjacentHTML("beforeend", renderAvisoWaModal()); }
+  if(STATE.mmEditor){ const cuMm = currentUser(); if(cuMm) document.body.insertAdjacentHTML("beforeend", renderMindmapEditor(cuMm)); }
   if(STATE.searchOpen){ document.body.insertAdjacentHTML("beforeend", renderGlobalSearchOverlay()); }
   if(STATE.screen === "main" && STATE.tab === "equipe" && STATE.equipeSub === "desvios"){ setTimeout(renderDeviosChart, 0); }
   if(STATE.screen === "dashboard" && cu){ setTimeout(() => renderWeeklyChart(cu), 0); }
@@ -2686,8 +2738,44 @@ function salvarBrainstorm(userId){
   }catch(e){}
 }
 
-// ---------- Mapa mental (salvo no banco, compartilhável) ----------
-const MM_PALETTE = ["#e63946","#1660ae","#f0b400","#1c8a4b","#7c5cbf","#e07b39","#0f9b8e","#d63384"];
+// ---------- Mapa mental acessível ----------
+// Sistema funcional de cores: cada tipo carrega cor + símbolo + nome por escrito,
+// para que a cor nunca seja o único recurso que transmite a informação.
+const MM_TIPOS = {
+  conceito:     { nome:"Conceito",     simbolo:"C", cor:"#1660ae", claro:"#e8f0f9", escuro:"#0f4278", desc:"Fundamento, definição" },
+  solucao:      { nome:"Solução",      simbolo:"S", cor:"#1c8a4b", claro:"#e4f4ea", escuro:"#0f5a30", desc:"Aplicação, resultado" },
+  importante:   { nome:"Importante",   simbolo:"!", cor:"#a97800", claro:"#fcf3dc", escuro:"#6b4c00", desc:"Memorizar, não esquecer" },
+  risco:        { nome:"Risco / erro", simbolo:"X", cor:"#c0392b", claro:"#fdeae7", escuro:"#8f2a1d", desc:"Exceção, erro comum" },
+  avancado:     { nome:"Avançado",     simbolo:"A", cor:"#6b4bb0", claro:"#efeafa", escuro:"#452c7d", desc:"Aprofundamento técnico" },
+  exemplo:      { nome:"Exemplo",      simbolo:"E", cor:"#c2621c", claro:"#fcece0", escuro:"#8a4413", desc:"Caso prático" },
+  complementar: { nome:"Complementar", simbolo:"+", cor:"#5b6b80", claro:"#eef1f6", escuro:"#3b4757", desc:"Informação de apoio" }
+};
+const MM_TIPO_PADRAO = "conceito";
+function mmTipo(node){ return MM_TIPOS[node && node.tipo] || MM_TIPOS[MM_TIPO_PADRAO]; }
+const MM_CAMADAS = ["Visão geral","Fundamentos","Desenvolvimento","Aplicação prática","Aprofundamento"];
+function mmCamadaNome(prof){ return MM_CAMADAS[Math.min(Math.max(prof,0), MM_CAMADAS.length-1)]; }
+
+// Preferências de leitura — por pessoa, neste navegador. Nunca carregam dado do mapa.
+function mmPrefs(){
+  const padrao = { fonte:100, contraste:false, foco:false, vista:"radial", zoom:1 };
+  try{ return Object.assign(padrao, JSON.parse(localStorage.getItem("gt_mm_prefs") || "{}")); }
+  catch(e){ return padrao; }
+}
+function mmSetPref(chave, valor){
+  const p = mmPrefs();
+  p[chave] = valor;
+  try{ localStorage.setItem("gt_mm_prefs", JSON.stringify(p)); }catch(e){}
+  render();
+}
+function mmAjustarFonte(passo){
+  const p = mmPrefs();
+  mmSetPref("fonte", Math.max(85, Math.min(145, (p.fonte||100) + passo)));
+}
+function mmAjustarZoom(passo){
+  const p = mmPrefs();
+  mmSetPref("zoom", Math.max(0.8, Math.min(1.3, Math.round(((p.zoom||1) + passo) * 100) / 100)));
+}
+
 function findMindmapNode(tree, id){
   if(tree.id === id) return tree;
   for(const filho of (tree.filhos||[])){ const found = findMindmapNode(filho, id); if(found) return found; }
@@ -2717,9 +2805,14 @@ function findMindmapPath(tree, targetId, caminhoAtual){
 }
 function searchMindmap(tree, termo, resultados){
   resultados = resultados || [];
-  if(tree.texto.toLowerCase().includes(termo)) resultados.push(tree);
+  if((tree.texto||"").toLowerCase().includes(termo)) resultados.push(tree);
   (tree.filhos||[]).forEach(f => searchMindmap(f, termo, resultados));
   return resultados;
+}
+function mmContar(tree){
+  let total = 1, prof = 0;
+  (tree.filhos||[]).forEach(f => { const r = mmContar(f); total += r.total; prof = Math.max(prof, r.prof + 1); });
+  return { total, prof };
 }
 function getViewedMindmapRow(cu){
   const donoId = STATE.mindmapDonoId || cu.id;
@@ -2736,55 +2829,93 @@ async function ensureMindmapRow(userId){
 async function saveMindmapTree(rowId, tree){
   await mutate(sb.from("mapas_mentais").update({ arvore: tree, atualizado_em: new Date().toISOString() }).eq("id", rowId));
 }
-async function mindmapAddNode(userId, parentId){
-  const texto = prompt("Texto da nova ideia:");
-  if(!texto || !texto.trim()) return;
-  const row = await ensureMindmapRow(STATE.mindmapDonoId || userId);
+
+// ---------- Editor de ideia (substitui os prompt() do navegador) ----------
+function mmAbrirEditor(nodeId, modo){
+  STATE.mmEditor = { nodeId: nodeId, modo: modo || "editar", tipo: null };
+  render();
+  setTimeout(() => { const c = document.getElementById("mm-ed-texto"); if(c) c.focus(); }, 30);
+}
+function mmFecharEditor(){ STATE.mmEditor = null; render(); }
+function mmEscolherTipo(tipo){
+  if(!STATE.mmEditor) return;
+  STATE.mmEditor.tipo = tipo;
+  render();
+}
+function renderMindmapEditor(cu){
+  const ed = STATE.mmEditor;
+  if(!ed) return "";
+  const row = getViewedMindmapRow(cu);
+  if(!row) return "";
+  const node = findMindmapNode(row.arvore, ed.nodeId);
+  if(!node) return "";
+  const novo = ed.modo === "novo";
+  const alvo = novo ? { texto:"", tipo:MM_TIPO_PADRAO, rotulo:"", link:"" } : node;
+  const tipoAtivo = ed.tipo || alvo.tipo || MM_TIPO_PADRAO;
+  const ehRaiz = node.id === "root" && !novo;
+  return `<div class="modal-overlay" onclick="if(event.target===this) mmFecharEditor()">
+    <div class="modal" style="max-width:520px;" role="dialog" aria-modal="true" aria-labelledby="mm-ed-titulo">
+      <h2 id="mm-ed-titulo" style="margin-bottom:4px;">${novo ? "Nova ideia" : "Editar ideia"}</h2>
+      <p class="muted-text" style="margin-bottom:16px;">${novo ? `Ligada a &ldquo;${esc(node.texto)}&rdquo; · entra no nível ${(findMindmapPath(row.arvore, node.id)||[]).length + 1} (${esc(mmCamadaNome((findMindmapPath(row.arvore, node.id)||[]).length))})` : `Nível ${(findMindmapPath(row.arvore, node.id)||[]).length} · ${esc(mmCamadaNome((findMindmapPath(row.arvore, node.id)||[]).length - 1))}`}</p>
+
+      <label class="field-label" for="mm-ed-texto">Texto da ideia</label>
+      <textarea id="mm-ed-texto" rows="2" placeholder="Uma ideia principal por bloco" style="margin-bottom:14px;">${esc(alvo.texto)}</textarea>
+
+      <p class="field-label" id="mm-ed-tipo-label">Tipo — define a cor e o símbolo</p>
+      <div class="mm-tipo-grid" role="group" aria-labelledby="mm-ed-tipo-label" style="margin-bottom:14px;">
+        ${Object.keys(MM_TIPOS).map(k => { const t = MM_TIPOS[k]; const on = k === tipoAtivo; return `
+          <button type="button" class="mm-tipo-opcao ${on?'ativo':''}" aria-pressed="${on}" onclick="mmEscolherTipo('${k}')">
+            <span class="mm-simbolo" style="background:${t.cor};">${t.simbolo}</span>
+            <span class="mm-tipo-texto"><strong>${t.nome}</strong><span>${t.desc}</span></span>
+          </button>`; }).join("")}
+      </div>
+
+      ${ehRaiz ? "" : `
+      <label class="field-label" for="mm-ed-rotulo">Rótulo da ligação <span style="text-transform:none;font-weight:400;">(como essa ideia se liga à anterior — opcional)</span></label>
+      <input id="mm-ed-rotulo" value="${esc(alvo.rotulo||"")}" placeholder="Ex: causa, depende de, resulta em" style="margin-bottom:14px;" />`}
+
+      <label class="field-label" for="mm-ed-link">Link <span style="text-transform:none;font-weight:400;">(opcional)</span></label>
+      <input id="mm-ed-link" value="${esc(alvo.link||"")}" placeholder="https://..." style="margin-bottom:18px;" />
+
+      <div class="row" style="gap:8px;justify-content:flex-end;flex-wrap:wrap;">
+        ${(!novo && !ehRaiz) ? `<button class="ghost" style="margin-right:auto;color:var(--danger-text);" onclick="mindmapDeleteNode('${cu.id}','${node.id}')">Remover ideia</button>` : ""}
+        <button class="ghost" onclick="mmFecharEditor()">Cancelar</button>
+        <button class="primary" onclick="mmSalvarEditor()">${novo ? "Adicionar" : "Salvar"}</button>
+      </div>
+    </div>
+  </div>`;
+}
+async function mmSalvarEditor(){
+  const ed = STATE.mmEditor;
+  if(!ed) return;
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
   if(!row) return;
+  const campoTexto = document.getElementById("mm-ed-texto");
+  const campoRotulo = document.getElementById("mm-ed-rotulo");
+  const campoLink = document.getElementById("mm-ed-link");
+  const texto = campoTexto ? campoTexto.value.trim() : "";
+  if(!texto){ toast("Escreva o texto da ideia."); if(campoTexto) campoTexto.focus(); return; }
+  const tipo = ed.tipo || MM_TIPO_PADRAO;
+  const rotulo = campoRotulo ? campoRotulo.value.trim() : "";
+  const link = campoLink ? campoLink.value.trim() : "";
   const tree = row.arvore;
-  const parent = findMindmapNode(tree, parentId);
-  if(parent){
-    parent.filhos = parent.filhos || [];
-    parent.filhos.push({ id: uid(), texto: texto.trim(), rotulo:"", link:"", filhos: [] });
-    await saveMindmapTree(row.id, tree);
-    render();
+  if(ed.modo === "novo"){
+    const pai = findMindmapNode(tree, ed.nodeId);
+    if(!pai) return;
+    pai.filhos = pai.filhos || [];
+    pai.filhos.push({ id: uid(), texto: texto, tipo: tipo, rotulo: rotulo, link: link, filhos: [] });
+  } else {
+    const node = findMindmapNode(tree, ed.nodeId);
+    if(!node) return;
+    node.texto = texto;
+    node.tipo = tipo;
+    if(campoRotulo) node.rotulo = rotulo;
+    node.link = link;
   }
-}
-async function mindmapEditNode(userId, nodeId){
-  const row = getViewedMindmapRow(currentUser());
-  if(!row) return;
-  const tree = row.arvore;
-  const node = findMindmapNode(tree, nodeId);
-  if(!node) return;
-  const novo = prompt("Editar texto da ideia:", node.texto);
-  if(novo === null || !novo.trim()) return;
-  node.texto = novo.trim();
-  await saveMindmapTree(row.id, tree);
+  STATE.mmEditor = null;
   render();
-}
-async function mindmapEditRotulo(userId, nodeId){
-  const row = getViewedMindmapRow(currentUser());
-  if(!row) return;
-  const tree = row.arvore;
-  const node = findMindmapNode(tree, nodeId);
-  if(!node) return;
-  const novo = prompt("Rótulo dessa ligação:", node.rotulo || "");
-  if(novo === null) return;
-  node.rotulo = novo.trim();
   await saveMindmapTree(row.id, tree);
-  render();
-}
-async function mindmapEditLink(userId, nodeId){
-  const row = getViewedMindmapRow(currentUser());
-  if(!row) return;
-  const tree = row.arvore;
-  const node = findMindmapNode(tree, nodeId);
-  if(!node) return;
-  const novo = prompt("Link (URL) associado a essa ideia:", node.link || "");
-  if(novo === null) return;
-  node.link = novo.trim();
-  await saveMindmapTree(row.id, tree);
-  render();
 }
 async function mindmapDeleteNode(userId, nodeId){
   if(nodeId === "root") return;
@@ -2793,9 +2924,10 @@ async function mindmapDeleteNode(userId, nodeId){
   if(!row) return;
   const tree = row.arvore;
   removeMindmapNode(tree, nodeId);
-  await saveMindmapTree(row.id, tree);
   if(!findMindmapNode(tree, STATE.mindmapFocoId)) STATE.mindmapFocoId = "root";
+  STATE.mmEditor = null;
   render();
+  await saveMindmapTree(row.id, tree);
 }
 async function mindmapMoveNode(userId, nodeId, direcao){
   const row = getViewedMindmapRow(currentUser());
@@ -2806,9 +2938,11 @@ async function mindmapMoveNode(userId, nodeId, direcao){
   const idx = pai.filhos.findIndex(f => f.id === nodeId);
   const novoIdx = idx + direcao;
   if(novoIdx < 0 || novoIdx >= pai.filhos.length) return;
-  [pai.filhos[idx], pai.filhos[novoIdx]] = [pai.filhos[novoIdx], pai.filhos[idx]];
-  await saveMindmapTree(row.id, tree);
+  const tmp = pai.filhos[idx];
+  pai.filhos[idx] = pai.filhos[novoIdx];
+  pai.filhos[novoIdx] = tmp;
   render();
+  await saveMindmapTree(row.id, tree);
 }
 async function mindmapVirarTarefa(userId, nodeId){
   const row = getViewedMindmapRow(currentUser());
@@ -2826,6 +2960,11 @@ async function mindmapVirarTarefa(userId, nodeId){
   if(ok) toast(`Tarefa "${node.texto}" criada — ajuste tema e prazo em "Minhas tarefas".`);
 }
 function mindmapFocar(nodeId){ STATE.mindmapFocoId = nodeId; STATE.mindmapBusca = ""; render(); }
+function mmAlternarRamo(nodeId){
+  STATE.mmRecolhidos = STATE.mmRecolhidos || {};
+  STATE.mmRecolhidos[nodeId] = !STATE.mmRecolhidos[nodeId];
+  render();
+}
 function updateMindmapSearch(){
   const input = document.getElementById("mindmap-busca-input");
   const container = document.getElementById("mindmap-search-results");
@@ -2836,11 +2975,10 @@ function updateMindmapSearch(){
   const cu = currentUser();
   const row = getViewedMindmapRow(cu);
   if(!row){ container.innerHTML = ""; return; }
-  const foco = findMindmapNode(row.arvore, STATE.mindmapFocoId) || row.arvore;
-  const achados = searchMindmap(row.arvore, termo).filter(n2 => n2.id !== foco.id);
+  const achados = searchMindmap(row.arvore, termo);
   container.innerHTML = achados.length
-    ? `<div class="card" style="margin-bottom:12px;"><p class="field-label">Resultados</p>${achados.map(n2 => `<button class="small ghost" style="margin:0 6px 6px 0;" onclick="mindmapFocar('${n2.id}')">${esc(n2.texto)}</button>`).join("")}</div>`
-    : `<div class="card" style="margin-bottom:12px;"><p class="empty-hint">Nada encontrado.</p></div>`;
+    ? `<div class="card" style="margin-bottom:12px;"><p class="field-label">${achados.length} resultado(s) para &ldquo;${esc(input.value.trim())}&rdquo;</p><div class="row" style="flex-wrap:wrap;gap:6px;">${achados.map(n2 => { const t = mmTipo(n2); return `<button class="small" onclick="mindmapFocar('${n2.id}')"><span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};">${t.simbolo}</span>${esc(n2.texto)}</button>`; }).join("")}</div></div>`
+    : `<div class="card" style="margin-bottom:12px;"><p class="empty-hint" style="padding:10px 0;">Nada encontrado para &ldquo;${esc(input.value.trim())}&rdquo;.</p></div>`;
 }
 async function mindmapCompartilhar(userId, alvoId){
   const row = await ensureMindmapRow(userId);
@@ -2850,6 +2988,151 @@ async function mindmapCompartilhar(userId, alvoId){
   await mutate(sb.from("mapas_mentais").update({ compartilhado_com: [...lista] }).eq("id", row.id));
   render();
 }
+
+function renderMindmapLegenda(){
+  if(!STATE.mmLegendaAberta) {
+    return `<button class="small ghost" style="margin-bottom:12px;" aria-expanded="false" onclick="STATE.mmLegendaAberta=true;render()">Ver o que cada cor significa &#9662;</button>`;
+  }
+  return `<div class="card" style="margin-bottom:12px;">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:10px;">
+      <h3>O que cada cor significa</h3>
+      <button class="small ghost" aria-expanded="true" onclick="STATE.mmLegendaAberta=false;render()">Recolher &#9652;</button>
+    </div>
+    <div class="mm-legenda">
+      ${Object.keys(MM_TIPOS).map(k => { const t = MM_TIPOS[k]; return `<div class="mm-legenda-item">
+        <span class="mm-simbolo" style="background:${t.cor};">${t.simbolo}</span>
+        <span><strong>${t.nome}</strong><span class="muted-text" style="display:block;">${t.desc}</span></span>
+      </div>`; }).join("")}
+    </div>
+    <p class="muted-text" style="margin:12px 0 0;">Cada tipo tem cor, símbolo e nome escrito — dá para seguir o mapa sem depender da cor.</p>
+  </div>`;
+}
+
+function renderMindmapControles(prefs){
+  return `<div class="mm-controles" role="group" aria-label="Preferências de leitura">
+    <div class="mm-ctrl-grupo">
+      <span class="mm-ctrl-rotulo">Vista</span>
+      <div class="seg">
+        <button class="seg-btn ${prefs.vista==='radial'?'active':''}" aria-pressed="${prefs.vista==='radial'}" onclick="mmSetPref('vista','radial')">Radial</button>
+        <button class="seg-btn ${prefs.vista==='roteiro'?'active':''}" aria-pressed="${prefs.vista==='roteiro'}" onclick="mmSetPref('vista','roteiro')">Roteiro</button>
+      </div>
+    </div>
+    <div class="mm-ctrl-grupo">
+      <span class="mm-ctrl-rotulo">Texto</span>
+      <button class="small" onclick="mmAjustarFonte(-10)" aria-label="Diminuir o tamanho do texto">A&minus;</button>
+      <span class="mm-ctrl-valor" aria-live="polite">${prefs.fonte}%</span>
+      <button class="small" onclick="mmAjustarFonte(10)" aria-label="Aumentar o tamanho do texto">A+</button>
+    </div>
+    ${prefs.vista==='radial' ? `<div class="mm-ctrl-grupo">
+      <span class="mm-ctrl-rotulo">Zoom</span>
+      <button class="small" onclick="mmAjustarZoom(-0.1)" aria-label="Afastar">&minus;</button>
+      <span class="mm-ctrl-valor" aria-live="polite">${Math.round(prefs.zoom*100)}%</span>
+      <button class="small" onclick="mmAjustarZoom(0.1)" aria-label="Aproximar">+</button>
+    </div>` : ""}
+    <button class="small ${prefs.contraste?'primary':''}" aria-pressed="${!!prefs.contraste}" onclick="mmSetPref('contraste',${!prefs.contraste})">Alto contraste</button>
+    <button class="small ${prefs.foco?'primary':''}" aria-pressed="${!!prefs.foco}" onclick="mmSetPref('foco',${!prefs.foco})" title="Esconde legenda, busca e enfeites para reduzir estímulos">Modo concentração</button>
+  </div>`;
+}
+
+function renderMindmapRoteiro(cu, tree, souDono){
+  const recolhidos = STATE.mmRecolhidos || {};
+  const linha = (node, prof, numero) => {
+    const t = mmTipo(node);
+    const filhos = node.filhos || [];
+    const fechado = !!recolhidos[node.id];
+    return `<li class="mm-roteiro-item" style="--prof:${prof};">
+      <div class="mm-roteiro-linha">
+        ${filhos.length ? `<button class="mm-roteiro-toggle" aria-expanded="${!fechado}" aria-label="${fechado?'Expandir':'Recolher'} ${esc(node.texto)}" onclick="mmAlternarRamo('${node.id}')">${fechado ? "&#9654;" : "&#9660;"}</button>` : `<span class="mm-roteiro-toggle-vazio" aria-hidden="true"></span>`}
+        <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" aria-hidden="true">${t.simbolo}</span>
+        <span class="mm-roteiro-texto">
+          <span class="mm-roteiro-numero">${numero}</span>
+          <strong>${esc(node.texto)}</strong>
+          <span class="mm-roteiro-meta">${t.nome}${node.rotulo ? ` · ligação: ${esc(node.rotulo)}` : ""}${filhos.length ? ` · ${filhos.length} sub-ideia${filhos.length===1?'':'s'}` : ""}</span>
+        </span>
+        <span class="mm-roteiro-acoes">
+          ${node.link ? `<a class="small ghost" href="${esc(node.link)}" target="_blank" rel="noopener" aria-label="Abrir link de ${esc(node.texto)}">Link</a>` : ""}
+          <button class="small ghost" onclick="mindmapFocar('${node.id}')" aria-label="Ver ${esc(node.texto)} no radial">Radial</button>
+          ${souDono ? `<button class="small ghost" onclick="mmAbrirEditor('${node.id}','novo')" aria-label="Adicionar ideia dentro de ${esc(node.texto)}">+ Ideia</button>
+          <button class="small ghost" onclick="mmAbrirEditor('${node.id}','editar')" aria-label="Editar ${esc(node.texto)}">Editar</button>` : ""}
+          <button class="small ghost" onclick="mindmapVirarTarefa('${cu.id}','${node.id}')" aria-label="Transformar ${esc(node.texto)} em tarefa">Virar tarefa</button>
+        </span>
+      </div>
+      ${filhos.length && !fechado ? `<ol class="mm-roteiro-lista">${filhos.map((f,i) => linha(f, prof+1, numero + "." + (i+1))).join("")}</ol>` : ""}
+    </li>`;
+  };
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:12px;">
+      <div>
+        <h3 style="margin-bottom:2px;">Roteiro de leitura</h3>
+        <p class="muted-text" style="margin:0;">Comece no 1 e siga a numeração. Use os triângulos para recolher o que não interessa agora.</p>
+      </div>
+      <div class="row" style="gap:6px;">
+        <button class="small ghost" onclick="STATE.mmRecolhidos={};render()">Expandir tudo</button>
+      </div>
+    </div>
+    <ol class="mm-roteiro-lista mm-roteiro-raiz">${linha(tree, 0, "1")}</ol>
+  </div>`;
+}
+
+function renderMindmapRadial(cu, tree, foco, souDono, prefs){
+  const filhos = foco.filhos || [];
+  const n = filhos.length;
+  const raio = 34 * (prefs.zoom || 1);
+  let svgLinks = "";
+  const tf = mmTipo(foco);
+  let nodesHtml = `<button type="button" class="mm-node mm-center" style="left:50%;top:50%;background:${prefs.contraste ? "#000" : tf.escuro};" ${souDono?`onclick="mmAbrirEditor('${foco.id}','editar')"`:'disabled'} aria-label="Ideia central: ${esc(foco.texto)}${souDono?'. Clique para editar':''}">
+    <span class="mm-simbolo mm-simbolo-sm" style="background:${tf.cor};" aria-hidden="true">${tf.simbolo}</span>
+    <span>${esc(foco.texto)}</span>
+  </button>`;
+
+  filhos.forEach((filho, i) => {
+    const angulo = (360 / n) * i - 90;
+    const rad = angulo * Math.PI / 180;
+    const x = 50 + raio * Math.cos(rad);
+    const y = 50 + raio * Math.sin(rad);
+    const t = mmTipo(filho);
+    const cor = prefs.contraste ? t.escuro : t.cor;
+    const dx = x - 50, dy = y - 50;
+    const len = Math.sqrt(dx*dx + dy*dy) || 1;
+    const nx = -dy/len, ny = dx/len;
+    const bend = 6;
+    const ctrlX = 50 + dx/2 + nx*bend;
+    const ctrlY = 50 + dy/2 + ny*bend;
+    const nFilhos = (filho.filhos||[]).length;
+
+    svgLinks += `<path d="M 50 50 Q ${ctrlX.toFixed(1)} ${ctrlY.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="${prefs.contraste?'1':'0.7'}" />`;
+
+    nodesHtml += `<button type="button" class="mm-node" style="left:${x}%;top:${y}%;background:${cor};" onclick="mindmapFocar('${filho.id}')" aria-label="${esc(filho.texto)}. Tipo ${t.nome}.${nFilhos?` ${nFilhos} sub-ideias.`:''} Abrir">
+      <span class="mm-simbolo mm-simbolo-sm" style="background:rgba(255,255,255,.3);" aria-hidden="true">${t.simbolo}</span>
+      <span>${esc(filho.texto)}</span>
+      ${nFilhos ? `<span class="mm-node-contador">${nFilhos}</span>` : ""}
+    </button>`;
+    if(!prefs.foco && filho.rotulo){
+      nodesHtml += `<span class="mm-label" style="left:${ctrlX}%;top:${ctrlY}%;">${esc(filho.rotulo)}</span>`;
+    }
+  });
+
+  return `<div class="card">
+    <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
+      <p class="muted-text" style="margin:0;">Clique numa bolha para entrar nela. ${souDono ? "A bolha central abre o editor." : "Você está vendo um mapa compartilhado."}</p>
+      ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('${foco.id}','novo')">+ Nova ideia aqui</button>` : ""}
+    </div>
+    <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;">
+      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
+      ${nodesHtml}
+      ${!n ? `<p class="mm-vazio">Nenhuma ideia ligada ainda.${souDono?' Use "+ Nova ideia aqui".':''}</p>` : ""}
+    </div>
+    ${filhos.length ? `<div class="mm-ordenar">
+      <span class="muted-text">Reordenar:</span>
+      ${filhos.map((f,i) => `<span class="mm-ordenar-item">
+        <span>${esc(f.texto)}</span>
+        <button class="small ghost" onclick="mindmapMoveNode('${cu.id}','${f.id}',-1)" aria-label="Mover ${esc(f.texto)} para antes" ${i===0?'disabled':''}>&#9664;</button>
+        <button class="small ghost" onclick="mindmapMoveNode('${cu.id}','${f.id}',1)" aria-label="Mover ${esc(f.texto)} para depois" ${i===filhos.length-1?'disabled':''}>&#9654;</button>
+      </span>`).join("")}
+    </div>` : ""}
+  </div>`;
+}
+
 function renderMindmapContent(cu){
   if(!STATE.mindmapDonoId) STATE.mindmapDonoId = cu.id;
   let row = getViewedMindmapRow(cu);
@@ -2858,92 +3141,57 @@ function renderMindmapContent(cu){
       <button class="primary" onclick="ensureMindmapRow('${cu.id}').then(render)"><span style="margin-right:4px;">+</span>Criar meu mapa mental</button>
     </div>`;
   }
+  const prefs = mmPrefs();
   const tree = row.arvore;
   const souDono = row.dono_id === cu.id;
   if(!STATE.mindmapFocoId) STATE.mindmapFocoId = "root";
   let foco = findMindmapNode(tree, STATE.mindmapFocoId);
   if(!foco){ STATE.mindmapFocoId = "root"; foco = tree; }
-  const filhos = foco.filhos || [];
-  const n = filhos.length;
   const caminho = findMindmapPath(tree, foco.id) || [tree];
+  const stats = mmContar(tree);
+  const statsFoco = mmContar(foco);
 
-  // seletor de mapas visíveis (o meu + os compartilhados comigo)
   const mapasVisiveis = DB.mapasMentais.filter(m => m.dono_id === cu.id || (m.compartilhado_com||[]).includes(cu.id));
-  const seletor = mapasVisiveis.length > 1 ? `<select style="width:auto;margin-bottom:12px;" onchange="STATE.mindmapDonoId=this.value;STATE.mindmapFocoId='root';render()">
-    ${mapasVisiveis.map(m => `<option value="${m.dono_id}" ${STATE.mindmapDonoId===m.dono_id?'selected':''}>${m.dono_id===cu.id?'Meu mapa':'Mapa de '+esc(getUser(m.dono_id)?.nome||'?')}</option>`).join("")}
-  </select>` : "";
+  const seletor = mapasVisiveis.length > 1 ? `<div style="margin-bottom:12px;">
+    <label class="field-label" for="mm-seletor">Mapa</label>
+    <select id="mm-seletor" style="width:auto;" onchange="STATE.mindmapDonoId=this.value;STATE.mindmapFocoId='root';render()">
+      ${mapasVisiveis.map(m => `<option value="${m.dono_id}" ${STATE.mindmapDonoId===m.dono_id?'selected':''}>${m.dono_id===cu.id?'Meu mapa':'Mapa de '+esc((getUser(m.dono_id)||{}).nome||'?')}</option>`).join("")}
+    </select></div>` : "";
 
-  // busca
-  let buscaHtml = "";
-  if(STATE.mindmapBusca && STATE.mindmapBusca.trim().length >= 2){
-    const achados = searchMindmap(tree, STATE.mindmapBusca.trim().toLowerCase()).filter(n2 => n2.id !== foco.id);
-    buscaHtml = `<div class="card" style="margin-bottom:12px;">
-      <p class="field-label">Resultados</p>
-      ${achados.length ? achados.map(n2 => `<button class="small ghost" style="margin:0 6px 6px 0;" onclick="mindmapFocar('${n2.id}')">${esc(n2.texto)}</button>`).join("") : `<p class="empty-hint">Nada encontrado.</p>`}
-    </div>`;
-  }
+  const breadcrumb = caminho.map((n2,i) => {
+    const t = mmTipo(n2);
+    const ultimo = i === caminho.length-1;
+    return `<button class="mm-trilha-item ${ultimo?'atual':''}" ${ultimo?'aria-current="true"':''} onclick="mindmapFocar('${n2.id}')">
+      <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" aria-hidden="true">${t.simbolo}</span>${esc(n2.texto)}</button>`;
+  }).join(`<span class="muted-text" aria-hidden="true">&#8250;</span>`);
 
-  let svgLinks = "";
-  let nodesHtml = `<div class="mm-node mm-center" style="left:50%;top:50%;" onclick="mindmapEditNode('${cu.id}','${foco.id}')">${esc(foco.texto)}</div>`;
+  const progresso = `<div class="mm-progresso">
+    <span><strong>${stats.total}</strong> ideia${stats.total===1?'':'s'} no mapa</span>
+    <span><strong>${stats.prof}</strong> nível${stats.prof===1?'':'is'} de profundidade</span>
+    <span>Você está no nível <strong>${caminho.length}</strong> — ${esc(mmCamadaNome(caminho.length-1))}</span>
+    ${statsFoco.total > 1 ? `<span><strong>${statsFoco.total - 1}</strong> ideia(s) abaixo daqui</span>` : ""}
+  </div>`;
 
-  filhos.forEach((filho, i) => {
-    const angulo = (360 / n) * i - 90;
-    const rad = angulo * Math.PI / 180;
-    const x = 50 + 38 * Math.cos(rad);
-    const y = 50 + 38 * Math.sin(rad);
-    const cor = MM_PALETTE[i % MM_PALETTE.length];
-    const dx = x - 50, dy = y - 50;
-    const len = Math.sqrt(dx*dx + dy*dy) || 1;
-    const nx = -dy/len, ny = dx/len;
-    const bend = 7;
-    const ctrlX = 50 + dx/2 + nx*bend;
-    const ctrlY = 50 + dy/2 + ny*bend;
-
-    svgLinks += `<path d="M 50 50 Q ${ctrlX.toFixed(1)} ${ctrlY.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="0.6" />`;
-
-    nodesHtml += `<div class="mm-node" style="left:${x}%;top:${y}%;background:${cor};" onclick="mindmapFocar('${filho.id}')">
-      <span onclick="event.stopPropagation();mindmapEditNode('${cu.id}','${filho.id}')">${esc(filho.texto)}${filho.filhos && filho.filhos.length ? ` (${filho.filhos.length})` : ""}</span>
-      ${filho.link ? `<div onclick="event.stopPropagation();window.open('${esc(filho.link)}','_blank')" style="font-size:11px;margin-top:2px;">&#128279;</div>` : ""}
-      <div class="mm-node-actions" onclick="event.stopPropagation();">
-        <button onclick="mindmapMoveNode('${cu.id}','${filho.id}',-1)" aria-label="Mover pra esquerda">&#9664;</button>
-        <button onclick="mindmapAddNode('${cu.id}','${filho.id}')" aria-label="Adicionar ideia ligada">+</button>
-        <button onclick="mindmapDeleteNode('${cu.id}','${filho.id}')" aria-label="Remover">&minus;</button>
-        <button onclick="mindmapMoveNode('${cu.id}','${filho.id}',1)" aria-label="Mover pra direita">&#9654;</button>
-      </div>
-      <div class="row" style="justify-content:center;gap:4px;margin-top:3px;" onclick="event.stopPropagation();">
-        <button class="small ghost" style="font-size:10px;padding:2px 6px;" onclick="mindmapEditLink('${cu.id}','${filho.id}')">&#128279; link</button>
-        <button class="small ghost" style="font-size:10px;padding:2px 6px;" onclick="mindmapVirarTarefa('${cu.id}','${filho.id}')">&#10132; tarefa</button>
-      </div>
-    </div>`;
-    nodesHtml += `<div class="mm-label" style="left:${ctrlX}%;top:${ctrlY}%;" onclick="mindmapEditRotulo('${cu.id}','${filho.id}')">${esc(filho.rotulo || ("Ideia_"+(i+1)))}</div>`;
-  });
-
-  const breadcrumb = caminho.map((n2,i) => `<button class="link-btn" onclick="mindmapFocar('${n2.id}')" style="${i===caminho.length-1?'font-weight:800;text-decoration:none;':''}">${esc(n2.texto)}</button>`).join(` <span class="muted-text">&#8250;</span> `);
-
-  return `${seletor}
-  <div class="row" style="flex-wrap:wrap;margin-bottom:10px;">${breadcrumb}</div>
+  return `${prefs.foco ? "" : seletor}
+  <nav class="mm-trilha" aria-label="Caminho até a ideia atual">${breadcrumb}</nav>
+  ${progresso}
+  ${renderMindmapControles(prefs)}
+  ${prefs.foco ? "" : `
   <div class="row" style="gap:8px;margin-bottom:12px;flex-wrap:wrap;">
-    <input id="mindmap-busca-input" placeholder="Buscar no mapa..." value="${esc(STATE.mindmapBusca||'')}" oninput="updateMindmapSearch()" style="max-width:240px;" />
-    ${souDono ? `<button class="small ghost" onclick="STATE.mindmapCompartilharOpen=!STATE.mindmapCompartilharOpen;render()">&#128101; Compartilhar</button>` : `<span class="badge accent">Mapa compartilhado com você</span>`}
+    <label class="sr-only" for="mindmap-busca-input">Buscar no mapa</label>
+    <input id="mindmap-busca-input" placeholder="Buscar no mapa..." value="${esc(STATE.mindmapBusca||'')}" oninput="updateMindmapSearch()" style="max-width:260px;" />
+    ${souDono ? `<button class="small ghost" aria-expanded="${!!STATE.mindmapCompartilharOpen}" onclick="STATE.mindmapCompartilharOpen=!STATE.mindmapCompartilharOpen;render()">Compartilhar</button>` : `<span class="badge accent">Mapa compartilhado com você</span>`}
   </div>
   ${STATE.mindmapCompartilharOpen && souDono ? `<div class="card" style="margin-bottom:12px;">
     <p class="field-label">Quem pode ver e editar esse mapa</p>
-    ${DB.usuarios.filter(u=>u.id!==cu.id && u.ativo!==false).map(u => `<label class="row" style="gap:8px;padding:4px 0;cursor:pointer;">
+    ${DB.usuarios.filter(u=>u.id!==cu.id && u.ativo!==false).map(u => `<label class="row" style="gap:8px;padding:5px 0;cursor:pointer;">
       <input type="checkbox" style="width:auto;" ${(row.compartilhado_com||[]).includes(u.id)?'checked':''} onchange="mindmapCompartilhar('${cu.id}','${u.id}')" />
-      <span style="font-size:13px;">${esc(u.nome)}</span>
+      <span style="font-size:13.5px;">${esc(u.nome)}</span>
     </label>`).join("")}
   </div>` : ""}
-  <div id="mindmap-search-results">${buscaHtml}</div>
-  <div class="card">
-    <div class="row" style="justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px;">
-      <p class="muted-text" style="margin:0;">Clique numa bolha pra entrar · rótulo pra renomear a ligação · &#9664;&#9654; pra reordenar.</p>
-      <button class="small" onclick="mindmapAddNode('${cu.id}','${foco.id}')"><span style="margin-right:4px;">+</span>Nova ideia aqui</button>
-    </div>
-    <div class="mm-canvas">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
-      ${nodesHtml}
-    </div>
-  </div>`;
+  <div id="mindmap-search-results"></div>
+  ${renderMindmapLegenda()}`}
+  ${prefs.vista === "roteiro" ? renderMindmapRoteiro(cu, tree, souDono) : renderMindmapRadial(cu, tree, foco, souDono, prefs)}`;
 }
 function renderEscalaContent(cu){
   const atual = getAlocacaoAtual(cu.id);
