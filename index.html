@@ -319,7 +319,7 @@
   .mm-node-texto{display:block;max-width:100%;}
   .mm-node-barra{display:block;width:100%;height:5px;border-radius:3px;background:rgba(255,255,255,.3);overflow:hidden;}
   .mm-node-barra > span{display:block;height:100%;background:#fff;border-radius:3px;}
-  .mm-node-rodape{display:flex;gap:7px;flex-wrap:wrap;justify-content:center;font-size:.72em;font-weight:700;opacity:.95;}
+  .mm-node-rodape{font-size:.72em;font-weight:700;opacity:.95;text-align:center;}
   .mm-atrasado{text-decoration:underline;text-decoration-style:wavy;}
   .mm-node-flag{position:absolute;top:-7px;left:-7px;width:21px;height:21px;border-radius:11px;background:var(--danger);color:#fff;font-size:12px;font-weight:800;line-height:21px;border:2px solid var(--surface);}
   /* painel de controle */
@@ -374,14 +374,14 @@
   /* árvore horizontal */
   .mm-arv-tela{position:relative;padding:12px;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:24px 24px;}
   .mm-arv-no{position:absolute;border-left:5px solid var(--border-strong);border-radius:12px;overflow:visible;}
-  .mm-arv-abrir{display:flex;flex-direction:column;justify-content:space-between;gap:5px;width:100%;height:100%;border:none;border-radius:0 12px 12px 0;padding:8px 10px;color:#fff;text-align:left;box-shadow:0 2px 7px rgba(16,24,40,.16);font-weight:600;}
-  .mm-arv-abrir:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));box-shadow:0 5px 14px rgba(16,24,40,.24);}
+  .mm-arv-abrir{display:flex;flex-direction:column;justify-content:space-between;gap:5px;width:100%;height:100%;border:none;border-radius:0 12px 12px 0;padding:8px 10px;color:#fff;text-align:left;box-shadow:0 1px 3px rgba(16,24,40,.2);font-weight:600;}
+  .mm-arv-abrir:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));}
   .mm-arv-abrir:focus-visible{outline:3px solid var(--text);outline-offset:2px;}
   .mm-arv-topo{display:flex;align-items:center;gap:5px;min-width:0;}
   .mm-arv-titulo{font-size:.86em;line-height:1.25;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
   .mm-arv-barra{display:block;width:100%;height:4px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;}
   .mm-arv-barra > span{display:block;height:100%;background:#fff;border-radius:2px;}
-  .mm-arv-rodape{display:flex;gap:7px;flex-wrap:wrap;font-size:.68em;font-weight:700;opacity:.95;}
+  .mm-arv-rodape{font-size:.68em;font-weight:700;opacity:.95;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mm-arv-toggle{position:absolute;right:-15px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:2px;min-width:30px;height:26px;padding:0 6px;border-radius:13px;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text-2);font-size:14px;font-weight:800;line-height:1;box-shadow:var(--shadow-sm);z-index:3;}
   .mm-arv-toggle:hover{background:var(--surface-2);border-color:var(--text-3);color:var(--text);}
   .mm-arv-toggle-n{font-size:10.5px;font-weight:700;}
@@ -389,8 +389,8 @@
   .mm-rad-tela{position:relative;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:24px 24px;}
   .mm-rad-tela.mm-contraste{background-image:none;background-color:#fff;}
   .mm-rad-no{position:absolute;transform:translate(-50%,-50%);display:flex;}
-  .mm-rad-bloco{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;border:none;border-left:5px solid rgba(255,255,255,.5);border-radius:14px;padding:10px 12px;color:#fff;text-align:center;font-weight:600;box-shadow:0 3px 10px rgba(16,24,40,.2);line-height:1.3;}
-  .mm-rad-bloco:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));box-shadow:0 6px 16px rgba(16,24,40,.26);}
+  .mm-rad-bloco{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;border:none;border-left:5px solid rgba(255,255,255,.5);border-radius:14px;padding:10px 12px;color:#fff;text-align:center;font-weight:600;box-shadow:0 1px 3px rgba(16,24,40,.22);line-height:1.3;}
+  .mm-rad-bloco:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));}
   .mm-rad-bloco:focus-visible{outline:3px solid var(--text);outline-offset:3px;}
   .mm-rad-bloco[disabled]{opacity:1;cursor:default;}
   .mm-rad-no.central .mm-rad-bloco{font-size:1.06em;padding:13px 15px;}
@@ -3010,7 +3010,8 @@ function mmCentralizar(){
 }
 function mmPanInicio(ev, el){
   if(ev.button && ev.button !== 0) return;
-  if(ev.target && ev.target.closest && ev.target.closest("input,select,textarea")) return;
+  // Controles pequenos nunca iniciam arrasto: ali o gesto é sempre clique.
+  if(ev.target && ev.target.closest && ev.target.closest("input,select,textarea,.mm-rad-toggle,.mm-arv-toggle,.mm-bf,.mm-arv-alca,.mm-roteiro-toggle")) return;
   // Libera a trava aqui: ela só deve engolir o clique que nasce do próprio
   // arrasto, nunca um clique novo que a pessoa dá depois.
   mmCliqueBloqueado = false;
@@ -3021,7 +3022,7 @@ function mmPanMove(ev){
   if(!mmArrasto) return;
   const dx = ev.clientX - mmArrasto.x, dy = ev.clientY - mmArrasto.y;
   if(!mmArrasto.moveu){
-    if(Math.abs(dx) < 5 && Math.abs(dy) < 5) return;
+    if(Math.abs(dx) < 11 && Math.abs(dy) < 11) return;  // tolera a tremida da mão
     mmArrasto.moveu = true;
     mmArrasto.el.classList.add("mm-arrastando");
     try{ mmArrasto.el.setPointerCapture(mmArrasto.pid); }catch(e){}
@@ -3559,6 +3560,7 @@ function mindmapFocar(nodeId){ STATE.mindmapFocoId = nodeId; STATE.mindmapBusca 
 function mmAlternarRamo(nodeId){
   STATE.mmRecolhidos = STATE.mmRecolhidos || {};
   STATE.mmRecolhidos[nodeId] = !STATE.mmRecolhidos[nodeId];
+  if(mmAtualizarRadial()) return;
   mmRedesenharMapa();
 }
 // Recolher um ramo não muda menu, painel nem legenda. Redesenhar só a área do
@@ -3814,13 +3816,7 @@ function renderMindmapArvore(cu, tree, souDono, prefs){
           <span class="mm-arv-titulo">${esc(node.texto)}</span>
         </span>
         <span class="mm-arv-barra"><span style="width:${pct}%;"></span></span>
-        <span class="mm-arv-rodape">
-          <span>${pct}%</span>
-          ${tarefa ? `<span class="mm-arv-tarefa" title="Avanço vem da tarefa vinculada">&#9873;</span>` : ""}
-          ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
-          ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
-          ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
-        </span>
+        <span class="mm-arv-rodape ${atrasado?'mm-atrasado':''}">${[pct+"%", tarefa?"&#9873;":"", ck.total?(ck.feitos+"/"+ck.total):"", resp?esc(resp.nome.split(" ")[0]):"", node.prazo?fmtDate(node.prazo):""].filter(Boolean).join(" · ")}</span>
       </button>
       ${r.nFilhos ? `<button type="button" class="mm-arv-toggle" aria-expanded="${!r.fechado}"
         aria-label="${r.fechado?'Expandir':'Recolher'} ${esc(node.texto)} (${r.nFilhos})"
@@ -4005,11 +4001,9 @@ function mmLayoutRadial(raiz, recolhidos){
   return { nos:nos, linhas:linhas, largura: (maxX-minX) + M*2, altura: (maxY-minY) + M*2 };
 }
 
-function renderMindmapRadial(cu, tree, foco, souDono, prefs){
-  const recolhidos = STATE.mmRecolhidos || {};
-  const L = mmLayoutRadial(foco, recolhidos);
-
-  const caminhos = L.linhas.map(([pai, filho]) => {
+// As linhas entre as bolhas: curva leve para não virar um emaranhado de retas.
+function mmSvgCaminhos(L, prefs){
+  return L.linhas.map(([pai, filho]) => {
     const dx = filho.x - pai.x, dy = filho.y - pai.y;
     const dist = Math.sqrt(dx*dx + dy*dy) || 1;
     const nx = -dy/dist, ny = dx/dist;
@@ -4017,21 +4011,27 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
     const cy = pai.y + dy/2 + ny*(dist*0.1);
     return `<path d="M ${pai.x.toFixed(1)} ${pai.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${filho.x.toFixed(1)} ${filho.y.toFixed(1)}" fill="none" stroke="${mmCorDe(filho.node, prefs)}" stroke-width="${prefs.contraste?3:2.2}" opacity=".75" />`;
   }).join("");
-
-  const blocos = L.nos.map(r => {
-    const node = r.node;
-    const t = mmTipo(node), st = mmStatus(node);
-    const pct = mmAvanco(node);
-    const ck = mmChecklistStats(node);
-    const tarefa = mmTarefaDe(node);
-    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
-    const atrasado = mmAtrasado(node);
-    const central = r.prof === 0;
-    const rotulo = `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${pct} por cento.${ck.total?` Checklist ${ck.feitos} de ${ck.total}.`:''}${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${atrasado?', vencido':''}.`:''}`;
-    // o botão de recolher fica na borda externa, na direção do próprio ramo
-    const rad = (r.ang || 0) * Math.PI/180;
-    const bx = Math.cos(rad) * (r.w/2), by = Math.sin(rad) * (r.h/2);
-    return `<div class="mm-rad-no ${central?'central':''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;min-height:${r.h}px;">
+}
+// Onde fica o botão de recolher: na borda externa da bolha, na direção do ramo.
+function mmRadPontaToggle(r){
+  const rad = (r.ang || 0) * Math.PI/180;
+  return { bx: Math.cos(rad) * (r.w/2), by: Math.sin(rad) * (r.h/2) };
+}
+function mmRadRotuloToggle(r){
+  return `${r.fechado?'Expandir':'Recolher'} ${esc(r.node.texto)} (${r.nFilhos})`;
+}
+function mmRadNoHtml(r, prefs, souDono){
+  const node = r.node;
+  const t = mmTipo(node), st = mmStatus(node);
+  const pct = mmAvanco(node);
+  const ck = mmChecklistStats(node);
+  const tarefa = mmTarefaDe(node);
+  const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
+  const atrasado = mmAtrasado(node);
+  const central = r.prof === 0;
+  const rotulo = `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${pct} por cento.${ck.total?` Checklist ${ck.feitos} de ${ck.total}.`:''}${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${atrasado?', vencido':''}.`:''}`;
+  const pt = mmRadPontaToggle(r);
+  return `<div class="mm-rad-no ${central?'central':''}" data-no="${node.id}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;min-height:${r.h}px;">
       ${souDono && !central ? `<span class="mm-arv-alca mm-rad-alca" draggable="true" ondragstart="mmDragInicio(event,'${node.id}')" ondragend="mmDragFim(event)" title="Arraste para mover este item para dentro de outro" aria-hidden="true">&#8942;&#8942;</span>` : ""}
       <button type="button" class="mm-rad-bloco" style="background:${mmCorDe(node, prefs)};border-left-color:${mmCorSecundaria(node, prefs)};"
         ${souDono ? `onclick="mmAbrirEditor('${node.id}','editar')"` : (central ? "disabled" : `onclick="mindmapFocar('${node.id}')"`)}
@@ -4043,20 +4043,79 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
         </span>
         <span class="mm-node-texto">${esc(node.texto)}</span>
         <span class="mm-node-barra" aria-hidden="true"><span style="width:${pct}%;"></span></span>
-        <span class="mm-node-rodape">
-          <span>${pct}%</span>
-          ${tarefa ? `<span title="Avanço vem da tarefa vinculada">&#9873;</span>` : ""}
-          ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
-          ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
-          ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
-        </span>
+        <span class="mm-node-rodape ${atrasado?'mm-atrasado':''}">${[pct+"%", tarefa?"&#9873;":"", ck.total?(ck.feitos+"/"+ck.total):"", resp?esc(resp.nome.split(" ")[0]):"", node.prazo?fmtDate(node.prazo):""].filter(Boolean).join(" · ")}</span>
       </button>
-      ${r.nFilhos && !central ? `<button type="button" class="mm-rad-toggle" style="left:calc(50% + ${bx.toFixed(0)}px);top:calc(50% + ${by.toFixed(0)}px);"
-        aria-expanded="${!r.fechado}" aria-label="${r.fechado?'Expandir':'Recolher'} ${esc(node.texto)} (${r.nFilhos})"
+      ${r.nFilhos && !central ? `<button type="button" class="mm-rad-toggle" style="left:calc(50% + ${pt.bx.toFixed(0)}px);top:calc(50% + ${pt.by.toFixed(0)}px);"
+        aria-expanded="${!r.fechado}" aria-label="${mmRadRotuloToggle(r)}"
         onclick="event.stopPropagation();mmAlternarRamo('${node.id}')">${r.fechado ? "+" : "&minus;"}<span class="mm-arv-toggle-n">${r.nFilhos}</span></button>` : ""}
       ${atrasado ? `<span class="mm-node-flag" title="Prazo vencido">!</span>` : ""}
     </div>`;
-  }).join("");
+}
+// Recolher e expandir não muda nenhum dado: muda só quais bolhas aparecem e
+// onde. Refazer o HTML do mapa inteiro a cada clique era o que pesava (o
+// navegador gasta mais tempo lendo o HTML do que a gente gasta montando ele).
+// Aqui as bolhas que já estão na tela são reaproveitadas — só mudam de lugar,
+// somem ou voltam a aparecer. Cada bolha é criada uma vez e nunca mais.
+function mmAtualizarRadial(){
+  const tela = document.querySelector(".mm-rad-tela");
+  const mundo = mmMundo();
+  if(!tela || !mundo) return false;
+  const cu = currentUser();
+  if(!cu) return false;
+  const row = getViewedMindmapRow(cu);
+  if(!row) return false;
+  const prefs = mmPrefs();
+  if(prefs.vista !== "radial") return false;
+  const souDono = row.dono_id === cu.id;
+  const foco = findMindmapNode(row.arvore, STATE.mindmapFocoId) || row.arvore;
+  const L = mmLayoutRadial(foco, STATE.mmRecolhidos || {});
+
+  const existentes = new Map();
+  tela.querySelectorAll("[data-no]").forEach(el => existentes.set(el.getAttribute("data-no"), el));
+
+  const criar = [];
+  L.nos.forEach(r => {
+    const el = existentes.get(r.node.id);
+    if(!el){ criar.push(mmRadNoHtml(r, prefs, souDono)); return; }
+    existentes.delete(r.node.id);
+    el.style.display = "";
+    el.style.left = r.x + "px";
+    el.style.top = r.y + "px";
+    el.style.width = r.w + "px";
+    el.style.minHeight = r.h + "px";
+    el.classList.toggle("central", r.prof === 0);
+    const bt = el.querySelector(".mm-rad-toggle");
+    if(bt){
+      const pt = mmRadPontaToggle(r);
+      bt.style.left = "calc(50% + " + pt.bx.toFixed(0) + "px)";
+      bt.style.top = "calc(50% + " + pt.by.toFixed(0) + "px)";
+      bt.setAttribute("aria-expanded", String(!r.fechado));
+      bt.setAttribute("aria-label", mmRadRotuloToggle(r));
+      if(bt.firstChild && bt.firstChild.nodeType === 3) bt.firstChild.nodeValue = r.fechado ? "+" : "\u2212";
+    }
+  });
+  // As que sobraram saíram de cena: ficam guardadas, prontas para voltar.
+  existentes.forEach(el => { el.style.display = "none"; });
+
+  const svg = tela.querySelector("svg");
+  if(svg){
+    svg.setAttribute("width", Math.round(L.largura));
+    svg.setAttribute("height", Math.round(L.altura));
+    svg.innerHTML = mmSvgCaminhos(L, prefs);
+  }
+  tela.style.width = Math.round(L.largura) + "px";
+  tela.style.height = Math.round(L.altura) + "px";
+  mundo.setAttribute("data-larg", Math.round(L.largura));
+  mundo.setAttribute("data-alt", Math.round(L.altura));
+  if(criar.length) tela.insertAdjacentHTML("beforeend", criar.join(""));
+  return true;
+}
+function renderMindmapRadial(cu, tree, foco, souDono, prefs){
+  const recolhidos = STATE.mmRecolhidos || {};
+  const L = mmLayoutRadial(foco, recolhidos);
+
+  const caminhos = mmSvgCaminhos(L, prefs);
+  const blocos = L.nos.map(r => mmRadNoHtml(r, prefs, souDono)).join("");
 
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
