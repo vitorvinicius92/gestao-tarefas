@@ -376,6 +376,19 @@
   .mm-arv-toggle{position:absolute;right:-15px;top:50%;transform:translateY(-50%);display:flex;align-items:center;gap:2px;min-width:30px;height:26px;padding:0 6px;border-radius:13px;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text-2);font-size:14px;font-weight:800;line-height:1;box-shadow:var(--shadow-sm);z-index:3;}
   .mm-arv-toggle:hover{background:var(--surface-2);border-color:var(--text-3);color:var(--text);}
   .mm-arv-toggle-n{font-size:10.5px;font-weight:700;}
+  /* radial multinível */
+  .mm-rad-tela{position:relative;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:24px 24px;}
+  .mm-rad-tela.mm-contraste{background-image:none;background-color:#fff;}
+  .mm-rad-no{position:absolute;transform:translate(-50%,-50%);display:flex;}
+  .mm-rad-bloco{display:flex;flex-direction:column;align-items:center;gap:5px;width:100%;border:none;border-left:5px solid rgba(255,255,255,.5);border-radius:14px;padding:10px 12px;color:#fff;text-align:center;font-weight:600;box-shadow:0 3px 10px rgba(16,24,40,.2);line-height:1.3;}
+  .mm-rad-bloco:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));box-shadow:0 6px 16px rgba(16,24,40,.26);}
+  .mm-rad-bloco:focus-visible{outline:3px solid var(--text);outline-offset:3px;}
+  .mm-rad-bloco[disabled]{opacity:1;cursor:default;}
+  .mm-rad-no.central .mm-rad-bloco{font-size:1.06em;padding:13px 15px;}
+  .mm-rad-no .mm-node-texto{font-size:.88em;}
+  .mm-rad-toggle{position:absolute;transform:translate(-50%,-50%);display:flex;align-items:center;gap:2px;min-width:30px;height:26px;padding:0 6px;border-radius:13px;border:1.5px solid var(--border-strong);background:var(--surface);color:var(--text-2);font-size:14px;font-weight:800;line-height:1;box-shadow:var(--shadow-sm);z-index:4;}
+  .mm-rad-toggle:hover{background:var(--surface-2);border-color:var(--text-3);color:var(--text);}
+  .mm-rad-alca{left:-4px;top:50%;}
   .mm-arv-alca{position:absolute;left:-3px;top:50%;transform:translateY(-50%);z-index:4;cursor:grab;color:rgba(255,255,255,.85);font-size:11px;letter-spacing:-3px;padding:7px 3px;line-height:1;border-radius:4px;}
   .mm-arv-alca:active{cursor:grabbing;}
   .mm-arv-no:hover .mm-arv-alca{background:rgba(0,0,0,.18);}
@@ -2863,7 +2876,10 @@ function mmStatusEfetivo(node){
     return (node && node.status) || MM_STATUS_PADRAO;
   }
   const sts = filhos.map(mmStatusEfetivo);
-  if(sts.indexOf("parado") !== -1) return "parado";
+  // "Parado" só sobe quando TUDO abaixo está parado. Se bastasse um item,
+  // um único risco bloqueado pintaria o projeto inteiro de vermelho e o
+  // sinal se perderia — os bloqueios aparecem no painel e no filtro.
+  if(sts.every(x => x === "parado")) return "parado";
   if(sts.every(x => x === "concluido")) return "concluido";
   if(sts.every(x => x === "nao_iniciado")) return "nao_iniciado";
   if(sts.every(x => x === "concluido" || x === "revisao")) return "revisao";
@@ -3806,15 +3822,23 @@ function mmAjustarRolagemArvore(){
   if(!pan) return;
   const v = mmVista();
   if(v.x === null || v.y === null){
+    const mundo = mmMundo();
+    const larg = mundo ? Number(mundo.getAttribute("data-larg")||0) : 0;
+    const alt = mundo ? Number(mundo.getAttribute("data-alt")||0) : 0;
     const raiz = pan.querySelector('[data-raiz="1"]');
     if(raiz){
+      // Árvore: raiz encostada à esquerda, centrada na vertical.
       v.x = 28;
       v.y = pan.clientHeight/2 - (raiz.offsetTop + raiz.offsetHeight/2) * v.z;
+    } else if(larg && alt){
+      // Radial: encaixa o mapa inteiro na janela, para os botões de recolher
+      // ficarem ao alcance já na abertura.
+      const cabe = Math.min((pan.clientWidth - 40) / larg, (pan.clientHeight - 40) / alt);
+      v.z = Math.max(0.35, Math.min(1, Math.round(cabe * 100) / 100));
+      v.x = (pan.clientWidth - larg * v.z) / 2;
+      v.y = (pan.clientHeight - alt * v.z) / 2;
     } else {
-      const mundo = mmMundo();
-      const alt = mundo ? Number(mundo.getAttribute("data-alt")||0) : 0;
-      v.x = Math.max(12, (pan.clientWidth - (mundo ? Number(mundo.getAttribute("data-larg")||0) : 0) * v.z) / 2);
-      v.y = Math.max(12, (pan.clientHeight - alt * v.z) / 2);
+      v.x = 12; v.y = 12;
     }
   }
   mmAplicarTransform();
@@ -3886,86 +3910,134 @@ function mmRecolherTudo(){
   render();
 }
 
-function renderMindmapRadial(cu, tree, foco, souDono, prefs){
-  const filhos = foco.filhos || [];
-  const n = filhos.length;
-  const raio = 34;
-  let svgLinks = "";
+// Radial multinível. Cada nó abre os filhos num setor angular em torno da
+// própria direção, e o setor estreita a cada nível — é isso que impede os
+// ramos de se cruzarem quando o mapa cresce.
+function mmLayoutRadial(raiz, recolhidos){
+  const TAM = [{w:188,h:88},{w:166,h:82},{w:148,h:72},{w:136,h:66},{w:128,h:62}];
+  const RAIO_MIN = [0, 215, 180, 155, 140];
+  const FOLGA = 26;
+  const tam = (p) => TAM[Math.min(p, TAM.length-1)];
+  const raioMin = (p) => RAIO_MIN[Math.min(p, RAIO_MIN.length-1)];
+  const filhosDe = (node, prof) => (prof > 0 && recolhidos[node.id]) ? [] : (node.filhos || []);
+  // Quantas "pontas" cada ramo tem. O setor de cada filho é proporcional a
+  // isso — senão um ramo com 1 item recebe o mesmo ângulo de um com 10.
+  function pontas(node, prof){
+    const f = filhosDe(node, prof);
+    if(!f.length) return 1;
+    return f.reduce((soma, c) => soma + pontas(c, prof+1), 0);
+  }
+  const nos = [], linhas = [];
+  function anda(node, prof, angCentro, abertura, x, y){
+    const t = tam(prof);
+    const reg = { node:node, prof:prof, x:x, y:y, w:t.w, h:t.h, ang:angCentro,
+      fechado: prof > 0 && !!recolhidos[node.id], nFilhos:(node.filhos||[]).length };
+    nos.push(reg);
+    const filhos = filhosDe(node, prof);
+    if(!filhos.length) return reg;
+    const tf = tam(prof+1);
+    // O raio tem que ser grande o bastante para o arco comportar os filhos
+    // lado a lado: comprimento do arco = raio x ângulo (em radianos).
+    const aberturaRad = Math.max(abertura, 1) * Math.PI/180;
+    const precisa = (filhos.length * (tf.w + FOLGA)) / aberturaRad;
+    const r = Math.max(raioMin(prof+1), precisa);
+    const total = filhos.reduce((soma, c) => soma + pontas(c, prof+1), 0) || filhos.length;
+    let acumulado = 0;
+    filhos.forEach((f) => {
+      const peso = pontas(f, prof+1) / total;
+      const fatia = abertura * peso;
+      const a = angCentro - abertura/2 + acumulado + fatia/2;
+      acumulado += fatia;
+      const rad = a * Math.PI/180;
+      const filhoReg = anda(f, prof+1, a, Math.min(fatia * 0.92, 150), x + r*Math.cos(rad), y + r*Math.sin(rad));
+      linhas.push([reg, filhoReg]);
+    });
+    return reg;
+  }
+  anda(raiz, 0, -90, 360, 0, 0);
+  const M = 34;
+  let minX = 0, maxX = 0, minY = 0, maxY = 0;
+  nos.forEach(n => {
+    minX = Math.min(minX, n.x - n.w/2); maxX = Math.max(maxX, n.x + n.w/2);
+    minY = Math.min(minY, n.y - n.h/2); maxY = Math.max(maxY, n.y + n.h/2);
+  });
+  nos.forEach(n => { n.x += -minX + M; n.y += -minY + M; });
+  return { nos:nos, linhas:linhas, largura: (maxX-minX) + M*2, altura: (maxY-minY) + M*2 };
+}
 
-  const bloco = (node, central) => {
+function renderMindmapRadial(cu, tree, foco, souDono, prefs){
+  const recolhidos = STATE.mmRecolhidos || {};
+  const L = mmLayoutRadial(foco, recolhidos);
+
+  const caminhos = L.linhas.map(([pai, filho]) => {
+    const dx = filho.x - pai.x, dy = filho.y - pai.y;
+    const dist = Math.sqrt(dx*dx + dy*dy) || 1;
+    const nx = -dy/dist, ny = dx/dist;
+    const cx = pai.x + dx/2 + nx*(dist*0.1);
+    const cy = pai.y + dy/2 + ny*(dist*0.1);
+    return `<path d="M ${pai.x.toFixed(1)} ${pai.y.toFixed(1)} Q ${cx.toFixed(1)} ${cy.toFixed(1)} ${filho.x.toFixed(1)} ${filho.y.toFixed(1)}" fill="none" stroke="${mmCorDe(filho.node, prefs)}" stroke-width="${prefs.contraste?3:2.2}" opacity=".75" />`;
+  }).join("");
+
+  const blocos = L.nos.map(r => {
+    const node = r.node;
     const t = mmTipo(node), st = mmStatus(node);
-    const fundo = mmCorDe(node, prefs);
-    const faixa = mmCorSecundaria(node, prefs);
     const pct = mmAvanco(node);
+    const ck = mmChecklistStats(node);
+    const tarefa = mmTarefaDe(node);
     const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
     const atrasado = mmAtrasado(node);
-    const ck = mmChecklistStats(node);
-    const nFilhos = (node.filhos||[]).length;
-    return `
-      <span class="mm-faixa" style="background:${faixa};" aria-hidden="true"></span>
-      <span class="mm-marcas" aria-hidden="true">
-        <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" title="${t.nome}">${t.simbolo}</span>
-        <span class="mm-simbolo mm-simbolo-sm" style="background:${st.cor};" title="${st.nome}">${st.simbolo}</span>
-      </span>
-      <span class="mm-node-texto">${esc(node.texto)}</span>
-      <span class="mm-node-barra" aria-hidden="true"><span style="width:${pct}%;"></span></span>
-      <span class="mm-node-rodape">
-        <span>${pct}%</span>
-        ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
-        ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
-        ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
-      </span>
-      ${nFilhos && !central ? `<span class="mm-node-contador">${nFilhos}</span>` : ""}
-      ${atrasado ? `<span class="mm-node-flag" title="Prazo vencido">!</span>` : ""}`;
-  };
-  const rotulo = (node) => {
-    const t = mmTipo(node), st = mmStatus(node);
-    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
-    const ckr = mmChecklistStats(node);
-    return `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${mmAvanco(node)} por cento.${ckr.total?` Checklist ${ckr.feitos} de ${ckr.total}.`:''}${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${mmAtrasado(node)?', vencido':''}.`:''}`;
-  };
-
-  let nodesHtml = `<button type="button" class="mm-node mm-center" style="left:50%;top:50%;background:${mmCorDe(foco, prefs)};" ${souDono?`onclick="mmAbrirEditor('${foco.id}','editar')"`:'disabled'} aria-label="Item central: ${rotulo(foco)}${souDono?' Clique para editar':''}">${bloco(foco, true)}</button>`;
-
-  filhos.forEach((filho, i) => {
-    const angulo = (360 / n) * i - 90;
-    const rad = angulo * Math.PI / 180;
-    const x = 50 + raio * Math.cos(rad);
-    const y = 50 + raio * Math.sin(rad);
-    const cor = mmCorDe(filho, prefs);
-    const dx = x - 50, dy = y - 50;
-    const len = Math.sqrt(dx*dx + dy*dy) || 1;
-    const nx = -dy/len, ny = dx/len;
-    const bend = 6;
-    const ctrlX = 50 + dx/2 + nx*bend;
-    const ctrlY = 50 + dy/2 + ny*bend;
-
-    svgLinks += `<path d="M 50 50 Q ${ctrlX.toFixed(1)} ${ctrlY.toFixed(1)} ${x.toFixed(1)} ${y.toFixed(1)}" fill="none" stroke="${cor}" stroke-width="${prefs.contraste?'1':'0.7'}" />`;
-    nodesHtml += `<button type="button" class="mm-node" style="left:${x}%;top:${y}%;background:${cor};" onclick="mindmapFocar('${filho.id}')" aria-label="${rotulo(filho)} Abrir">${bloco(filho, false)}</button>`;
-    if(!prefs.foco && filho.rotulo){
-      nodesHtml += `<span class="mm-label" style="left:${ctrlX}%;top:${ctrlY}%;">${esc(filho.rotulo)}</span>`;
-    }
-  });
+    const central = r.prof === 0;
+    const rotulo = `${esc(node.texto)}. Tipo ${t.nome}. ${st.nome}, ${pct} por cento.${ck.total?` Checklist ${ck.feitos} de ${ck.total}.`:''}${resp?` Responsável ${esc(resp.nome)}.`:''}${node.prazo?` Prazo ${fmtDate(node.prazo)}${atrasado?', vencido':''}.`:''}`;
+    // o botão de recolher fica na borda externa, na direção do próprio ramo
+    const rad = (r.ang || 0) * Math.PI/180;
+    const bx = Math.cos(rad) * (r.w/2), by = Math.sin(rad) * (r.h/2);
+    return `<div class="mm-rad-no ${central?'central':''}" style="left:${r.x}px;top:${r.y}px;width:${r.w}px;min-height:${r.h}px;">
+      ${souDono && !central ? `<span class="mm-arv-alca mm-rad-alca" draggable="true" ondragstart="mmDragInicio(event,'${node.id}')" ondragend="mmDragFim(event)" title="Arraste para mover este item para dentro de outro" aria-hidden="true">&#8942;&#8942;</span>` : ""}
+      <button type="button" class="mm-rad-bloco" style="background:${mmCorDe(node, prefs)};border-left-color:${mmCorSecundaria(node, prefs)};"
+        ${souDono ? `onclick="mmAbrirEditor('${node.id}','editar')"` : (central ? "disabled" : `onclick="mindmapFocar('${node.id}')"`)}
+        ${souDono && !central ? `ondragover="mmDragSobre(event,'${node.id}')" ondragleave="mmDragSai(event)" ondrop="mmSoltarEm(event,'${node.id}')"` : ""}
+        aria-label="${rotulo}${souDono?' Clique para editar':''}">
+        <span class="mm-marcas" aria-hidden="true">
+          <span class="mm-simbolo mm-simbolo-sm" style="background:${t.cor};" title="${t.nome}">${t.simbolo}</span>
+          <span class="mm-simbolo mm-simbolo-sm" style="background:${st.cor};" title="${st.nome}">${st.simbolo}</span>
+        </span>
+        <span class="mm-node-texto">${esc(node.texto)}</span>
+        <span class="mm-node-barra" aria-hidden="true"><span style="width:${pct}%;"></span></span>
+        <span class="mm-node-rodape">
+          <span>${pct}%</span>
+          ${tarefa ? `<span title="Avanço vem da tarefa vinculada">&#9873;</span>` : ""}
+          ${ck.total ? `<span>${ck.feitos}/${ck.total}</span>` : ""}
+          ${resp ? `<span>${esc(resp.nome.split(" ")[0])}</span>` : ""}
+          ${node.prazo ? `<span class="${atrasado?'mm-atrasado':''}">${fmtDate(node.prazo)}</span>` : ""}
+        </span>
+      </button>
+      ${r.nFilhos && !central ? `<button type="button" class="mm-rad-toggle" style="left:calc(50% + ${bx.toFixed(0)}px);top:calc(50% + ${by.toFixed(0)}px);"
+        aria-expanded="${!r.fechado}" aria-label="${r.fechado?'Expandir':'Recolher'} ${esc(node.texto)} (${r.nFilhos})"
+        onclick="event.stopPropagation();mmAlternarRamo('${node.id}')">${r.fechado ? "+" : "&minus;"}<span class="mm-arv-toggle-n">${r.nFilhos}</span></button>` : ""}
+      ${atrasado ? `<span class="mm-node-flag" title="Prazo vencido">!</span>` : ""}
+    </div>`;
+  }).join("");
 
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <p class="muted-text" style="margin:0;">Clique numa bolha para entrar nela. Arraste a folha para navegar. ${souDono ? "A bolha central abre o editor." : "Você está vendo um mapa compartilhado."}</p>
+      <p class="muted-text" style="margin:0;">Arraste a folha para navegar e use a roda do mouse para o zoom. O <strong>+</strong> na borda de cada bolha abre e fecha aquele ramo, sem sair da tela. ${souDono ? "Clique numa bolha para editar." : "Você está vendo um mapa compartilhado."}</p>
       ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('${foco.id}','novo')">+ Novo item aqui</button>` : ""}
     </div>
     <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" onwheel="mmRoda(event)" tabindex="0" role="group" aria-label="Mapa radial, arraste para navegar e use a roda do mouse para o zoom">
-    ${renderMmBarraFlutuante(souDono, false)}
-    <div class="mm-mundo" data-larg="900" data-alt="520">
-    <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;width:900px;height:520px;">
-      <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
-      ${nodesHtml}
-      ${!n ? `<p class="mm-vazio">Nenhum item ligado ainda.${souDono?' Use "+ Novo item aqui".':''}</p>` : ""}
-    </div></div></div>
-    ${filhos.length ? `<div class="mm-ordenar">
-      <span class="muted-text">Reordenar:</span>
-      ${filhos.map((f,i) => `<span class="mm-ordenar-item">
+      ${renderMmBarraFlutuante(souDono, L.nos.some(n => n.nFilhos))}
+      <div class="mm-mundo" data-larg="${Math.round(L.largura)}" data-alt="${Math.round(L.altura)}">
+        <div class="mm-rad-tela ${prefs.contraste?'mm-contraste':''}" style="width:${Math.round(L.largura)}px;height:${Math.round(L.altura)}px;font-size:${prefs.fonte}%;">
+          <svg width="${Math.round(L.largura)}" height="${Math.round(L.altura)}" aria-hidden="true" style="position:absolute;inset:0;">${caminhos}</svg>
+          ${blocos}
+        </div>
+      </div>
+    </div>
+    ${(foco.filhos||[]).length ? `<div class="mm-ordenar">
+      <span class="muted-text">Reordenar o primeiro nível:</span>
+      ${foco.filhos.map((f,i) => `<span class="mm-ordenar-item">
         <span>${esc(f.texto)}</span>
         <button class="small ghost" onclick="mindmapMoveNode('${cu.id}','${f.id}',-1)" aria-label="Mover ${esc(f.texto)} para antes" ${i===0?'disabled':''}>&#9664;</button>
-        <button class="small ghost" onclick="mindmapMoveNode('${cu.id}','${f.id}',1)" aria-label="Mover ${esc(f.texto)} para depois" ${i===filhos.length-1?'disabled':''}>&#9654;</button>
+        <button class="small ghost" onclick="mindmapMoveNode('${cu.id}','${f.id}',1)" aria-label="Mover ${esc(f.texto)} para depois" ${i===foco.filhos.length-1?'disabled':''}>&#9654;</button>
       </span>`).join("")}
     </div>` : ""}
   </div>`;
