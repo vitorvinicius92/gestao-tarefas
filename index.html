@@ -347,12 +347,23 @@
   .mm-roteiro-pct{font-size:11.5px;font-weight:800;min-width:34px;font-variant-numeric:tabular-nums;}
   .mm-apagado{opacity:.45;}
   /* área arrastável (radial e árvore) */
-  .mm-pan{overflow:auto;border-radius:var(--radius-lg);cursor:grab;touch-action:pan-x pan-y;background:#fbfbf8;max-height:600px;}
+  .mm-pan{position:relative;overflow:hidden;border-radius:var(--radius-lg);cursor:grab;touch-action:none;background:#fbfbf8;height:600px;border:1px solid var(--border);}
   .mm-pan.mm-arrastando{cursor:grabbing;user-select:none;}
   .mm-pan:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
   .mm-pan .mm-canvas{border-radius:0;}
+  .mm-mundo{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform;}
+  /* barra flutuante sobre o mapa */
+  .mm-barra-flut{position:absolute;left:14px;top:14px;z-index:6;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 4px;background:var(--surface);border:1px solid var(--border);border-radius:22px;box-shadow:var(--shadow-md);}
+  .mm-bf{width:34px;height:34px;padding:0;border:none;background:none;box-shadow:none;border-radius:50%;font-size:15px;line-height:1;color:var(--text-2);display:flex;align-items:center;justify-content:center;}
+  .mm-bf:hover{background:var(--surface-2);color:var(--text);border-color:transparent;}
+  .mm-bf-valor{font-size:10.5px;font-weight:700;color:var(--text-2);font-variant-numeric:tabular-nums;padding:1px 0;}
+  .mm-bf-sep{width:20px;height:1px;background:var(--border);margin:3px 0;}
+  @media(max-width:760px){
+    .mm-barra-flut{flex-direction:row;left:50%;transform:translateX(-50%);top:auto;bottom:12px;border-radius:22px;}
+    .mm-bf-sep{width:1px;height:20px;margin:0 3px;}
+  }
   /* árvore horizontal */
-  .mm-arv-tela{position:relative;transform-origin:0 0;padding:12px;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:24px 24px;}
+  .mm-arv-tela{position:relative;padding:12px;background-color:#fbfbf8;background-image:linear-gradient(var(--border) 1px,transparent 1px),linear-gradient(90deg,var(--border) 1px,transparent 1px);background-size:24px 24px;}
   .mm-arv-no{position:absolute;border-left:5px solid var(--border-strong);border-radius:12px;overflow:visible;}
   .mm-arv-abrir{display:flex;flex-direction:column;justify-content:space-between;gap:5px;width:100%;height:100%;border:none;border-radius:0 12px 12px 0;padding:8px 10px;color:#fff;text-align:left;box-shadow:0 2px 7px rgba(16,24,40,.16);font-weight:600;}
   .mm-arv-abrir:hover{background-image:linear-gradient(rgba(0,0,0,.13),rgba(0,0,0,.13));box-shadow:0 5px 14px rgba(16,24,40,.24);}
@@ -374,7 +385,7 @@
   .mm-tag-tarefa{background:var(--accent-bg);color:var(--accent-text);}
   .mm-vinculo{display:flex;align-items:center;gap:9px;flex-wrap:wrap;padding:10px 12px;background:var(--accent-bg);border-radius:var(--radius-sm);margin-bottom:12px;}
   .mm-vinculo-quebrado{background:var(--danger-bg);color:var(--danger-text);font-size:12.5px;}
-  @media(max-width:760px){.mm-pan{max-height:460px;}}
+  @media(max-width:760px){.mm-pan{height:440px;}}
   /* checklist no editor */
   .mm-ck-editor{display:flex;flex-direction:column;gap:6px;margin-bottom:8px;}
   .mm-ck-linha-ed{display:flex;align-items:center;gap:8px;}
@@ -2914,15 +2925,69 @@ async function mmToggleCheck(nodeId, itemId){
   render();
   await saveMindmapTree(row.id, node === row.arvore ? node : row.arvore);
 }
-// Arrastar funciona a partir de qualquer ponto, inclusive de cima de um bloco.
-// Clique e arrasto são separados pela distância: até 5px é clique, além disso
-// é navegação e o clique seguinte é descartado.
+// Navegação da folha: a área é uma janela fixa e o conteúdo é empurrado por
+// transform. Diferente de rolagem, isso deixa arrastar para qualquer lado,
+// inclusive para o vazio — que é como as ferramentas de mapa mental funcionam.
 let mmArrasto = null;
 let mmCliqueBloqueado = false;
+let mmZoomTimer = null;
+function mmVista(){
+  if(!STATE.mmVista) STATE.mmVista = { x:null, y:null, z: mmPrefs().zoom || 1 };
+  return STATE.mmVista;
+}
+function mmMundo(){ return document.querySelector(".mm-mundo"); }
+function mmAplicarTransform(){
+  const mundo = mmMundo();
+  if(!mundo) return;
+  const v = mmVista();
+  mundo.style.transform = `translate(${Math.round(v.x||0)}px,${Math.round(v.y||0)}px) scale(${v.z})`;
+  const rotulo = document.getElementById("mm-zoom-valor");
+  if(rotulo) rotulo.textContent = Math.round(v.z*100) + "%";
+}
+function mmGuardarZoom(){
+  if(mmZoomTimer) clearTimeout(mmZoomTimer);
+  mmZoomTimer = setTimeout(() => {
+    const p = mmPrefs(); p.zoom = mmVista().z;
+    try{ localStorage.setItem("gt_mm_prefs", JSON.stringify(p)); }catch(e){}
+  }, 500);
+}
+function mmZoom(passo, cx, cy){
+  const v = mmVista();
+  const janela = document.querySelector(".mm-pan");
+  const antes = v.z;
+  const novo = Math.max(0.3, Math.min(2.5, Math.round((antes + passo) * 100) / 100));
+  if(novo === antes) return;
+  if(janela){
+    const cx2 = (cx === undefined) ? janela.clientWidth/2 : cx;
+    const cy2 = (cy === undefined) ? janela.clientHeight/2 : cy;
+    // mantém fixo o ponto sob o cursor
+    v.x = cx2 - (cx2 - (v.x||0)) * (novo/antes);
+    v.y = cy2 - (cy2 - (v.y||0)) * (novo/antes);
+  }
+  v.z = novo;
+  mmAplicarTransform();
+  mmGuardarZoom();
+}
+function mmRoda(ev){
+  if(!ev.deltaY) return;
+  ev.preventDefault();
+  const janela = ev.currentTarget.getBoundingClientRect();
+  mmZoom(ev.deltaY < 0 ? 0.1 : -0.1, ev.clientX - janela.left, ev.clientY - janela.top);
+}
+function mmCentralizar(){
+  const v = mmVista();
+  v.x = null; v.y = null;
+  STATE.mmCentrado = false;
+  render();
+}
 function mmPanInicio(ev, el){
   if(ev.button && ev.button !== 0) return;
   if(ev.target && ev.target.closest && ev.target.closest("input,select,textarea")) return;
-  mmArrasto = { el: el, x: ev.clientX, y: ev.clientY, sl: el.scrollLeft, st: el.scrollTop, moveu: false, pid: ev.pointerId };
+  // Libera a trava aqui: ela só deve engolir o clique que nasce do próprio
+  // arrasto, nunca um clique novo que a pessoa dá depois.
+  mmCliqueBloqueado = false;
+  const v = mmVista();
+  mmArrasto = { el: el, x: ev.clientX, y: ev.clientY, ox: v.x||0, oy: v.y||0, moveu: false, pid: ev.pointerId };
 }
 function mmPanMove(ev){
   if(!mmArrasto) return;
@@ -2933,8 +2998,10 @@ function mmPanMove(ev){
     mmArrasto.el.classList.add("mm-arrastando");
     try{ mmArrasto.el.setPointerCapture(mmArrasto.pid); }catch(e){}
   }
-  mmArrasto.el.scrollLeft = mmArrasto.sl - dx;
-  mmArrasto.el.scrollTop  = mmArrasto.st - dy;
+  const v = mmVista();
+  v.x = mmArrasto.ox + dx;
+  v.y = mmArrasto.oy + dy;
+  mmAplicarTransform();
   if(ev.preventDefault) ev.preventDefault();
 }
 function mmPanFim(ev){
@@ -2950,6 +3017,20 @@ if(typeof document !== "undefined"){
   document.addEventListener("click", function(ev){
     if(mmCliqueBloqueado){ mmCliqueBloqueado = false; ev.stopPropagation(); ev.preventDefault(); }
   }, true);
+}
+// Barra flutuante sobre o mapa, como nas ferramentas de mapa mental.
+function renderMmBarraFlutuante(souDono, temRamos){
+  return `<div class="mm-barra-flut" role="group" aria-label="Controles do mapa">
+    ${temRamos ? `<button type="button" class="mm-bf" onclick="STATE.mmRecolhidos={};render()" aria-label="Expandir todos os ramos" title="Expandir tudo">&#9661;</button>
+    <button type="button" class="mm-bf" onclick="mmRecolherTudo()" aria-label="Recolher todos os ramos" title="Recolher tudo">&#9651;</button>
+    <span class="mm-bf-sep"></span>` : ""}
+    <button type="button" class="mm-bf" onclick="mmZoom(0.1)" aria-label="Aproximar" title="Aproximar">+</button>
+    <span class="mm-bf-valor" id="mm-zoom-valor" aria-live="polite">${Math.round(mmVista().z*100)}%</span>
+    <button type="button" class="mm-bf" onclick="mmZoom(-0.1)" aria-label="Afastar" title="Afastar">&minus;</button>
+    <button type="button" class="mm-bf" onclick="mmCentralizar()" aria-label="Centralizar o mapa" title="Centralizar">&#9678;</button>
+    <span class="mm-bf-sep"></span>
+    <button type="button" class="mm-bf" onclick="mmBaixarSvg()" aria-label="Baixar o mapa como imagem" title="Baixar como imagem (SVG)">&#8595;</button>
+  </div>`;
 }
 function mmAlternarChecklist(nodeId){
   STATE.mmChecklistAberto = STATE.mmChecklistAberto || {};
@@ -3554,12 +3635,7 @@ function renderMindmapControles(prefs){
       <span class="mm-ctrl-valor" aria-live="polite">${prefs.fonte}%</span>
       <button class="small" onclick="mmAjustarFonte(10)" aria-label="Aumentar o tamanho do texto">A+</button>
     </div>
-    ${prefs.vista!=='roteiro' ? `<div class="mm-ctrl-grupo">
-      <span class="mm-ctrl-rotulo">Zoom</span>
-      <button class="small" onclick="mmAjustarZoom(-0.1)" aria-label="Afastar">&minus;</button>
-      <span class="mm-ctrl-valor" aria-live="polite">${Math.round(prefs.zoom*100)}%</span>
-      <button class="small" onclick="mmAjustarZoom(0.1)" aria-label="Aproximar">+</button>
-    </div>` : ""}
+
     <button class="small ${prefs.contraste?'primary':''}" aria-pressed="${!!prefs.contraste}" onclick="mmSetPref('contraste',${!prefs.contraste})">Alto contraste</button>
     <button class="small ${prefs.foco?'primary':''}" aria-pressed="${!!prefs.foco}" onclick="mmSetPref('foco',${!prefs.foco})" title="Esconde legenda, busca e enfeites para reduzir estímulos">Modo concentração</button>
   </div>`;
@@ -3709,29 +3785,95 @@ function renderMindmapArvore(cu, tree, souDono, prefs){
 
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <p class="muted-text" style="margin:0;">Arraste o fundo para navegar. Use <strong>+</strong> e <strong>&minus;</strong> para abrir e fechar cada ramo.${souDono ? " Clique num bloco para editar, ou arraste pela alça (&#8942;&#8942;) para movê-lo de ramo." : ""}</p>
-      <div class="row" style="gap:6px;">
-        <button class="small ghost" onclick="STATE.mmRecolhidos={};render()">Expandir tudo</button>
-        <button class="small ghost" onclick="mmRecolherTudo()">Recolher tudo</button>
-        ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('root','novo')">+ Novo item</button>` : ""}
-      </div>
+      <p class="muted-text" style="margin:0;">Arraste a folha para qualquer lado, ou use a roda do mouse para o zoom. O <strong>+</strong> ao lado do bloco abre e fecha aquele ramo.${souDono ? " Clique num bloco para editar, ou arraste pela alça (&#8942;&#8942;) para movê-lo de ramo." : ""}</p>
+      ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('root','novo')">+ Novo item</button>` : ""}
     </div>
-    <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" tabindex="0" role="group" aria-label="Árvore do projeto, arraste para navegar">
-      <div class="mm-arv-tela" style="width:${L.largura}px;height:${L.altura}px;transform:scale(${zoom});font-size:${prefs.fonte}%;">
-        <svg width="${L.largura}" height="${L.altura}" aria-hidden="true" style="position:absolute;inset:0;">${caminhos}</svg>
-        ${blocos}
+    <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" onwheel="mmRoda(event)" tabindex="0" role="group" aria-label="Árvore do projeto, arraste para navegar e use a roda do mouse para o zoom">
+      ${renderMmBarraFlutuante(souDono, L.nos.some(n => n.nFilhos))}
+      <div class="mm-mundo" data-larg="${L.largura}" data-alt="${L.altura}">
+        <div class="mm-arv-tela" style="width:${L.largura}px;height:${L.altura}px;font-size:${prefs.fonte}%;">
+          <svg width="${L.largura}" height="${L.altura}" aria-hidden="true" style="position:absolute;inset:0;">${caminhos}</svg>
+          ${blocos}
+        </div>
       </div>
     </div>
   </div>`;
 }
-// A raiz fica no meio vertical da árvore; sem isso o mapa abre rolado.
+// Na primeira vez, encaixa a raiz à esquerda e no meio da janela.
+// Depois disso quem manda é o que a pessoa arrastou.
 function mmAjustarRolagemArvore(){
   const pan = document.querySelector(".mm-pan");
-  if(!pan || pan.getAttribute("data-ajustado")) return;
-  const raiz = pan.querySelector('[data-raiz="1"]');
-  if(!raiz) return;
-  pan.scrollTop = Math.max(0, raiz.offsetTop + raiz.offsetHeight/2 - pan.clientHeight/2);
-  pan.setAttribute("data-ajustado", "1");
+  if(!pan) return;
+  const v = mmVista();
+  if(v.x === null || v.y === null){
+    const raiz = pan.querySelector('[data-raiz="1"]');
+    if(raiz){
+      v.x = 28;
+      v.y = pan.clientHeight/2 - (raiz.offsetTop + raiz.offsetHeight/2) * v.z;
+    } else {
+      const mundo = mmMundo();
+      const alt = mundo ? Number(mundo.getAttribute("data-alt")||0) : 0;
+      v.x = Math.max(12, (pan.clientWidth - (mundo ? Number(mundo.getAttribute("data-larg")||0) : 0) * v.z) / 2);
+      v.y = Math.max(12, (pan.clientHeight - alt * v.z) / 2);
+    }
+  }
+  mmAplicarTransform();
+}
+
+// Exportar: a árvore já tem as posições calculadas, então vira SVG direto.
+// SVG abre no navegador, entra no Word e no PowerPoint e não perde qualidade.
+function mmBaixarSvg(){
+  const cu = currentUser();
+  const row = getViewedMindmapRow(cu);
+  if(!row){ toast("Nada para baixar ainda."); return; }
+  const prefs = mmPrefs();
+  const L = mmLayoutArvore(row.arvore, STATE.mmRecolhidos || {});
+  const esq = (txt) => String(txt||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+  const quebrar = (txt, max) => {
+    const palavras = String(txt||"").split(/\s+/);
+    const linhas = []; let atual = "";
+    palavras.forEach(pa => {
+      if((atual + " " + pa).trim().length > max){ if(atual) linhas.push(atual); atual = pa; }
+      else atual = (atual + " " + pa).trim();
+    });
+    if(atual) linhas.push(atual);
+    return linhas.slice(0,2);
+  };
+  let corpo = "";
+  L.linhas.forEach(([pai, filho]) => {
+    const x1 = pai.x + L.LARG, y1 = pai.y + L.ALT/2, x2 = filho.x, y2 = filho.y + L.ALT/2;
+    const meio = x1 + (x2 - x1)/2;
+    corpo += `<path d="M ${x1} ${y1} H ${meio} V ${y2} H ${x2}" fill="none" stroke="${mmCorSecundaria(filho.node, prefs)}" stroke-width="2"/>`;
+  });
+  L.nos.forEach(r => {
+    const node = r.node, t = mmTipo(node), st = mmStatus(node), pct = mmAvanco(node);
+    const resp = node.responsavel_id ? getUser(node.responsavel_id) : null;
+    corpo += `<g transform="translate(${r.x},${r.y})">
+      <rect width="${L.LARG}" height="${L.ALT}" rx="12" fill="${mmCorDe(node, prefs)}"/>
+      <rect width="5" height="${L.ALT}" rx="2" fill="${t.cor}"/>
+      ${quebrar(node.texto, 26).map((ln,i) => `<text x="12" y="${20 + i*15}" font-family="Inter,Arial,sans-serif" font-size="12.5" font-weight="600" fill="#ffffff">${esq(ln)}</text>`).join("")}
+      <rect x="12" y="${L.ALT-22}" width="${L.LARG-24}" height="4" rx="2" fill="#ffffff" opacity=".35"/>
+      <rect x="12" y="${L.ALT-22}" width="${Math.round((L.LARG-24)*pct/100)}" height="4" rx="2" fill="#ffffff"/>
+      <text x="12" y="${L.ALT-7}" font-family="Inter,Arial,sans-serif" font-size="10" font-weight="700" fill="#ffffff">${pct}% · ${esq(st.nome)}${resp?" · "+esq(resp.nome.split(" ")[0]):""}${node.prazo?" · "+esq(fmtDate(node.prazo)):""}</text>
+    </g>`;
+  });
+  const legenda = Object.keys(MM_TIPOS).map((k,i) => {
+    const t = MM_TIPOS[k];
+    return `<g transform="translate(${16 + i*150},${L.altura + 16})"><rect width="12" height="12" rx="3" fill="${t.cor}"/><text x="18" y="10" font-family="Inter,Arial,sans-serif" font-size="11" fill="#172033">${esq(t.nome)}</text></g>`;
+  }).join("");
+  const svg = `<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="${L.largura}" height="${L.altura + 46}" viewBox="0 0 ${L.largura} ${L.altura + 46}">
+<rect width="100%" height="100%" fill="#ffffff"/>${corpo}${legenda}</svg>`;
+  try{
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = ((row.arvore.texto || "mapa").replace(/[^\w\u00C0-\u017F -]/g," ").replace(/\s+/g," ").trim().slice(0,60) || "mapa") + ".svg";
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    setTimeout(() => URL.revokeObjectURL(url), 2000);
+    toast("Mapa baixado em SVG — abre no navegador e entra no Word e no PowerPoint.");
+  }catch(e){ toast("Não foi possível baixar: " + e.message); }
 }
 function mmRecolherTudo(){
   const cu = currentUser();
@@ -3807,15 +3949,17 @@ function renderMindmapRadial(cu, tree, foco, souDono, prefs){
 
   return `<div class="card">
     <div class="row" style="justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:8px;">
-      <p class="muted-text" style="margin:0;">Clique numa bolha para entrar nela. ${souDono ? "A bolha central abre o editor." : "Você está vendo um mapa compartilhado."}</p>
+      <p class="muted-text" style="margin:0;">Clique numa bolha para entrar nela. Arraste a folha para navegar. ${souDono ? "A bolha central abre o editor." : "Você está vendo um mapa compartilhado."}</p>
       ${souDono ? `<button class="primary small" onclick="mmAbrirEditor('${foco.id}','novo')">+ Novo item aqui</button>` : ""}
     </div>
-    <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" tabindex="0" role="group" aria-label="Mapa radial, arraste para navegar">
-    <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;width:${Math.round((prefs.zoom||1)*100)}%;height:${Math.round(480*(prefs.zoom||1))}px;">
+    <div class="mm-pan" onpointerdown="mmPanInicio(event,this)" onpointermove="mmPanMove(event)" onpointerup="mmPanFim(event)" onpointercancel="mmPanFim(event)" onpointerleave="mmPanFim(event)" onwheel="mmRoda(event)" tabindex="0" role="group" aria-label="Mapa radial, arraste para navegar e use a roda do mouse para o zoom">
+    ${renderMmBarraFlutuante(souDono, false)}
+    <div class="mm-mundo" data-larg="900" data-alt="520">
+    <div class="mm-canvas ${prefs.contraste?'mm-contraste':''}" style="font-size:${prefs.fonte}%;width:900px;height:520px;">
       <svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true" style="position:absolute;inset:0;width:100%;height:100%;">${svgLinks}</svg>
       ${nodesHtml}
       ${!n ? `<p class="mm-vazio">Nenhum item ligado ainda.${souDono?' Use "+ Novo item aqui".':''}</p>` : ""}
-    </div></div>
+    </div></div></div>
     ${filhos.length ? `<div class="mm-ordenar">
       <span class="muted-text">Reordenar:</span>
       ${filhos.map((f,i) => `<span class="mm-ordenar-item">
